@@ -7,8 +7,8 @@
   NODE_VERSION = "24"
 
 [functions]
-  node_bundler = "esbuild"
-  included_files = ["assets/NotoSansKR.ttf", "이수확인증_양식.pdf"]
+  node_bundler = "zisi"
+  included_files = ["server-runtime/runtime.mjs", "assets/NotoSansKR.ttf", "이수확인증_양식.pdf"]
 
 [[redirects]]
   from = "/api/*"

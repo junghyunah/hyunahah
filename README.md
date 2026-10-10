@@ -126,7 +126,7 @@ npm run test:e2e
 
 ## 주요 파일
 
-- `netlify.toml`, `netlify/functions/api.mjs`: Netlify 빌드·서버 함수 연결.
+- `netlify.toml`, `netlify/functions/api.cjs`, `netlify-handler.mjs`: Netlify 빌드·서버 함수 연결.
 - `server.mjs`: 인증·조회·서명·검증·PDF 생성 API.
 - `supabase-store.mjs`: 서버 전용 Supabase 연결.
 - `supabase/migrations/202610100001_training.sql`: 테이블·RLS·트랜잭션 함수.

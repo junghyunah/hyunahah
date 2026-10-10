@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createNetlifyHandler} from '../netlify/functions/api.mjs';
+import {createNetlifyHandler} from '../netlify-handler.mjs';
 import {memoryStore} from './memory-store.mjs';
 import {fixture} from './fixture.mjs';
 

@@ -1,5 +1,5 @@
 import serverless from 'serverless-http';
-import {createApplication} from '../../server.mjs';
+import {createApplication} from './server.mjs';
 
 export function createNetlifyHandler(options={}) {
   let application;
