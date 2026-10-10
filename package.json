@@ -7,7 +7,8 @@
     "build": "tailwindcss -i ./styles.input.css -o ./styles.css --minify",
     "start": "node --env-file-if-exists=.env server.mjs",
     "test": "node --test tests/*.test.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:netlify": "npm run build && node scripts/build-netlify.mjs"
   },
   "repository": {
     "type": "git",
@@ -28,6 +29,7 @@
     "lucide": "0.468.0",
     "pdf-lib": "1.17.1",
     "pngjs": "7.0.0",
+    "serverless-http": "3.2.0",
     "xlsx": "0.18.5"
   },
   "devDependencies": {
@@ -35,5 +37,8 @@
     "@playwright/test": "1.56.1",
     "tailwindcss": "3.4.17"
   },
-  "private": true
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
 }

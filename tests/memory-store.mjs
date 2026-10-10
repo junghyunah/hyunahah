@@ -2,7 +2,11 @@
 export function memoryStore(initial) {
   let snapshot=structuredClone(initial);
   const documents=new Map();
+  const sessions=new Map();
   return {
+    async session(token){return sessions.get(token)||null;},
+    async saveSession(token,entry){sessions.set(token,entry);},
+    async deleteSession(token){sessions.delete(token);},
     async load(){return structuredClone(snapshot);},
     async save({state,revision,documents:docs=[],passwordHash}){
       if(revision!==snapshot.revision)throw Object.assign(new Error('revision conflict'),{status:409});

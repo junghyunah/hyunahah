@@ -4,8 +4,10 @@ let lastServerState = null;
 let autosaveTimer;
 let saveQueue = Promise.resolve();
 let submitting = false;
+let adminSaving = false;
 async function requestApi(path, data, method = data === undefined ? 'GET' : 'POST') {
-  const response = await fetch(`/api/${path}`, {method,credentials:'same-origin',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
+  const response = await fetch(`/api/${path}`, {method,cache:'no-store',credentials:'same-origin',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
+  if(!response.headers.get('Content-Type')?.includes('application/json'))throw new Error('현재 배포에 서버 기능이 연결되지 않았습니다. Netlify의 새 버전 배포를 확인해주세요.');
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || '저장하지 못했습니다. 다시 시도해주세요.');
   return result;
@@ -21,6 +23,7 @@ loadStateFromStorage = async function() {
 };
 saveStateToStorage = async function() {
   if(!isAdminLoggedIn)throw new Error('담당자 로그인이 필요합니다.');
+  adminSaving=true;
   try {
     const result=await requestApi('state',{state:AppState,revision:serverRevision},'PUT');
     applyServerResult(result);
@@ -29,7 +32,7 @@ saveStateToStorage = async function() {
     catch {if(lastServerState)AppState=structuredClone(lastServerState);}
     renderAdminViews();
     throw error;
-  }
+  }finally{adminSaving=false;}
 };
 handleAdminLogin = async function(event) {
   event.preventDefault();
@@ -173,7 +176,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 // Refresh shared submissions without changing data while an administrator is editing.
 setInterval(async()=>{
-  if(!isAdminLoggedIn || activeAdminTab!=='status' || document.hidden)return;
-  try {applyServerResult(await requestApi('state'));renderAdminViews();}
+  if(!isAdminLoggedIn || !['status','participants'].includes(activeAdminTab) || document.hidden || adminSaving)return;
+  try {const result=await requestApi('state');if(adminSaving||result.revision<serverRevision)return;applyServerResult(result);renderAdminViews();}
   catch(error){showToast(error.message,'alert');}
 },15000);

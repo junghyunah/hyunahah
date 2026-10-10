@@ -10,6 +10,16 @@ export function createSupabaseStore({url=process.env.SUPABASE_URL,key=process.en
     throw new Error(`Supabase 데이터 작업 실패 (${error.code || 'network'})`);
   }
   return {
+    async session(tokenHash) {
+      const {data,error}=await client.from('training_sessions').select('role,participant_id,expires_at').eq('token_hash',tokenHash).maybeSingle();
+      check(error);return data?{role:data.role,id:data.participant_id,until:new Date(data.expires_at).getTime()}:null;
+    },
+    async saveSession(tokenHash,entry) {
+      const {error}=await client.from('training_sessions').insert({token_hash:tokenHash,role:entry.role,participant_id:entry.id||null,expires_at:new Date(entry.until).toISOString()});check(error);
+    },
+    async deleteSession(tokenHash) {
+      const {error}=await client.from('training_sessions').delete().eq('token_hash',tokenHash);check(error);
+    },
     async load() {
       const {data,error}=await client.rpc('load_training_state');
       check(error);return {state:data.state,revision:Number(data.revision),passwordHash:data.password_hash};

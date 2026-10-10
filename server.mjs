@@ -3,13 +3,13 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve, join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypto';
 import { createSupabaseStore } from './supabase-store.mjs';
 import { PDFDocument } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { PNG } from 'pngjs';
 
-const ROOT = fileURLToPath(new URL('.', import.meta.url));
+const ROOT = process.env.LAMBDA_TASK_ROOT || fileURLToPath(new URL('.', import.meta.url));
 const HOURS = [0,2,1,1,1,1,1,1,1,3,3,3,2,2,1,1,3,1];
 const fail = (status, message) => { throw Object.assign(new Error(message), { status }); };
 const stamp = () => new Date().toISOString();
@@ -42,7 +42,6 @@ export async function createApplication({ store = createSupabaseStore(), passwor
     if (!password || password.length < 12) throw new Error('첫 실행에는 ADMIN_PASSWORD를 12자 이상으로 설정하세요.');
     await store.save({...initial,passwordHash:passwordHash(password)});
   }
-  const sessions = new Map();
   const attempts = new Map();
   function loginLimit(req) {
     const key = req.socket.remoteAddress;
@@ -51,15 +50,16 @@ export async function createApplication({ store = createSupabaseStore(), passwor
     if (!entry || entry.until <= Date.now()) attempts.set(key,{count:1,until:Date.now()+600000});
     else entry.count++;
   }
-  function session(req,role) {
+  const tokenHash = token => createHash('sha256').update(token).digest('hex');
+  async function session(req,role) {
     const token = /(?:^|;\s*)session=([a-f0-9]+)/.exec(req.headers.cookie || '')?.[1];
-    const entry = sessions.get(token);
+    const entry = token && await store.session(tokenHash(token));
     if (!entry || entry.until < Date.now() || (role && entry.role !== role)) fail(401,'다시 로그인해주세요.');
     return entry;
   }
-  function newSession(res,role,id) {
+  async function newSession(res,role,id) {
     const token=randomBytes(32).toString('hex');
-    sessions.set(token,{role,id,until:Date.now()+8*3600000});
+    await store.saveSession(tokenHash(token),{role,id,until:Date.now()+8*3600000});
     res.setHeader('Set-Cookie',`session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${secureCookies?'; Secure':''}`);
   }
   const publicState = s => ({settings:{orgName:s.settings.orgName,depts:[]},participants:[],assignments:[],submissions:[],auditLogs:[],customPdfBase64:null});
@@ -129,15 +129,15 @@ export async function createApplication({ store = createSupabaseStore(), passwor
       if(path==='/api/public'&&req.method==='GET')return send(res,{state:publicState(state())});
       if(path==='/api/login'&&req.method==='POST') {
         loginLimit(req); const input=await body(req);
-        if(input.role==='admin') {if(typeof input.password!=='string'||input.password.length>256||!passwordMatches(input.password,snapshot.passwordHash))fail(401,'비밀번호를 다시 확인해주세요.');newSession(res,'admin');return send(res,{state:state(),revision:revision()});}
+        if(input.role==='admin') {if(typeof input.password!=='string'||input.password.length>256||!passwordMatches(input.password,snapshot.passwordHash))fail(401,'비밀번호를 다시 확인해주세요.');await newSession(res,'admin');return send(res,{state:state(),revision:revision()});}
         const found=state().participants.filter(p=>p.name===input.name&&p.birthDate===input.birthDate);
         if(found.length!==1)fail(401,'이름과 생년월일을 다시 확인해주세요.');
-        newSession(res,'participant',found[0].id);return send(res,{state:ownState(state(),found[0].id)});
+        await newSession(res,'participant',found[0].id);return send(res,{state:ownState(state(),found[0].id)});
       }
-      if(path==='/api/logout'&&req.method==='POST') {const token=/(?:^|;\s*)session=([a-f0-9]+)/.exec(req.headers.cookie||'')?.[1];sessions.delete(token);res.setHeader('Set-Cookie','session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(res,{ok:true});}
-      if(path==='/api/state'&&req.method==='GET'){const who=session(req);return send(res,{state:who.role==='admin'?state():ownState(state(),who.id),revision:who.role==='admin'?revision():undefined});}
+      if(path==='/api/logout'&&req.method==='POST') {const token=/(?:^|;\s*)session=([a-f0-9]+)/.exec(req.headers.cookie||'')?.[1];if(token)await store.deleteSession(tokenHash(token));res.setHeader('Set-Cookie','session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(res,{ok:true});}
+      if(path==='/api/state'&&req.method==='GET'){const who=await session(req);return send(res,{state:who.role==='admin'?state():ownState(state(),who.id),revision:who.role==='admin'?revision():undefined});}
       if(path==='/api/state'&&req.method==='PUT') {
-        session(req,'admin'); const input=await body(req);
+        await session(req,'admin'); const input=await body(req);
         return await serialized(async()=>{await refresh();
           if(input.revision!==revision())fail(409,'다른 화면에서 데이터가 변경되었습니다. 새로고침 후 다시 시도해주세요.');
           const old=state(); const s=input.state; validateState(s);
@@ -151,7 +151,7 @@ export async function createApplication({ store = createSupabaseStore(), passwor
         });
       }
       if(path==='/api/submission'&&req.method==='POST'){
-        const who=session(req,'participant'); const input=await body(req);
+        const who=await session(req,'participant'); const input=await body(req);
         return await serialized(async()=>{await refresh();
           const s=state(); const part=s.participants.find(p=>p.id===who.id);const a=part&&effectiveAssignment(s,part,input.assignDate);if(!a)fail(400,'교육 배정을 찾을 수 없습니다.');
           let sub=s.submissions.find(x=>x.participantId===who.id&&x.assignDate===a.assignDate);
@@ -172,10 +172,10 @@ export async function createApplication({ store = createSupabaseStore(), passwor
         });
       }
       if(path==='/api/review'&&req.method==='POST'){
-        session(req,'admin');const input=await body(req);return await serialized(async()=>{await refresh();const s=state();const sub=s.submissions.find(x=>x.id===input.id);if(!sub)fail(404,'기록을 찾을 수 없습니다.');sub.reviewed=!sub.reviewed;sub.reviewedAt=sub.reviewed?stamp():null;const rev=await commit(s);return send(res,{state:s,revision:rev});});
+        await session(req,'admin');const input=await body(req);return await serialized(async()=>{await refresh();const s=state();const sub=s.submissions.find(x=>x.id===input.id);if(!sub)fail(404,'기록을 찾을 수 없습니다.');sub.reviewed=!sub.reviewed;sub.reviewedAt=sub.reviewed?stamp():null;const rev=await commit(s);return send(res,{state:s,revision:rev});});
       }
       if(path==='/api/correction'&&req.method==='POST') {
-        session(req,'admin');const input=await body(req);return await serialized(async()=>{await refresh();
+        await session(req,'admin');const input=await body(req);return await serialized(async()=>{await refresh();
           const s=state();const part=s.participants.find(p=>p.id===input.participantId);const a=part&&effectiveAssignment(s,part,input.oldDate);const sub=s.submissions.find(x=>x.participantId===input.participantId&&x.assignDate===input.oldDate);
           if(!a||!sub)fail(404,'수정할 제출 기록이 없습니다.');checkCourses(input.courseIds);if(!validDate(input.date)||!input.date.startsWith('2026-')||!safeText(input.reason))fail(400,'날짜와 수정 사유를 확인해주세요.');
           if(input.date!==input.oldDate&&(effectiveAssignment(s,part,input.date)||s.submissions.some(x=>x.participantId===part.id&&x.assignDate===input.date)))fail(409,'변경 날짜에 이미 교육이 있습니다.');
@@ -191,7 +191,7 @@ export async function createApplication({ store = createSupabaseStore(), passwor
         });
       }
       if(path==='/api/pdf'&&req.method==='GET'){
-        session(req,'admin');const pdf=await store.document(url.searchParams.get('participant'),url.searchParams.get('date'));if(!pdf)fail(404,'완료된 확인증이 없습니다.');res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="certificate.pdf"'});return res.end(pdf);
+        await session(req,'admin');const pdf=await store.document(url.searchParams.get('participant'),url.searchParams.get('date'));if(!pdf)fail(404,'완료된 확인증이 없습니다.');res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="certificate.pdf"'});return res.end(pdf);
       }
       if(path.startsWith('/api/'))fail(404,'요청을 찾을 수 없습니다.');
       const files={'/':'index.html','/index.html':'index.html','/client.js':'client.js','/styles.css':'styles.css','/pdf_template_b64.js':'pdf_template_b64.js','/vendor/lucide.js':'node_modules/lucide/dist/umd/lucide.js','/vendor/xlsx.js':'node_modules/xlsx/dist/xlsx.full.min.js','/vendor/pdf-lib.js':'node_modules/pdf-lib/dist/pdf-lib.min.js','/vendor/jszip.js':'node_modules/jszip/dist/jszip.min.js'};

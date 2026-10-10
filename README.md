@@ -69,13 +69,23 @@ npm start
 
 부분 완료한 과목은 서버에 저장되고 다른 기기에서도 이어할 수 있습니다. 최종 과목까지 저장되면 서버가 PDF를 생성하고 Supabase에 함께 저장합니다. 담당자의 현황 화면은 15초마다 새 기록을 확인합니다.
 
-## 5. 참여자에게 링크를 보내려면
+## 5. Netlify에서 다른 기기와 공유하기
 
-Supabase 연결과 웹앱 배포는 별개입니다. 이 프로젝트는 지속 실행되는 Node.js 서버를 지원하는 서비스에 배포해야 합니다. 배포 서비스에 `.env`와 같은 환경변수를 설정하고 HTTPS 주소를 확보한 뒤, 그 주소를 기존 복지관 문자 시스템으로 보냅니다.
+Netlify에 index.html만 배포하면 서버 API는 실행되지 않습니다. 이 저장소의 `netlify.toml`은 화면을 `dist`에 빌드하고 `/api/*`를 Netlify Functions에 연결합니다.
 
-GitHub는 코드를 보관하는 곳입니다. GitHub에 코드를 올리거나 Supabase에 SQL을 실행했다고 웹앱이 자동 배포되지는 않습니다.
+1. Netlify 사이트의 Git 배포 브랜치를 `codex/supabase-integration`으로 설정합니다. 기본 main은 아직 구버전일 수 있습니다.
+2. Supabase SQL Editor에서 `202610100001_training.sql`을 적용하고, 이어서 `202610100002_sessions.sql`을 적용합니다. 첫 SQL은 기존 테이블과 공개 접근 정책을 보완하며, 두 번째 SQL은 여러 함수 인스턴스에서 로그인 상태를 공유합니다.
+3. Netlify의 환경변수 설정에 SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_PASSWORD, COOKIE_SECURE=true를 등록합니다. 비밀 키는 브라우저 코드나 GitHub에 넣지 않습니다. 비밀번호는 12자 이상이어야 합니다.
+4. 새 배포를 실행합니다. 빌드 명령은 `npm run build:netlify`, 공개 폴더는 `dist`, 함수 폴더는 `netlify/functions`입니다. netlify.toml에서 지정하므로 기존 대시보드 설정이 있다면 일치하는지 확인합니다.
+5. 배포된 주소의 `/api/health`가 JSON `{"ok":true}`를 반환하는지 확인합니다. HTML이나 404가 나오면 함수 라우팅이 반영되지 않은 것입니다. 503이면 DB 보완 SQL 또는 서버 환경변수를 확인합니다.
+6. 담당자로 가상 참여자를 추가합니다. Supabase `training_participants`에 저장됐는지 확인하고, 다른 브라우저에서 그 참여자로 본인 확인을 테스트합니다.
+7. 다른 담당자 화면의 명단·현황은 최대 15초 뒤 갱신됩니다. 참여자는 본인 확인할 때 최신 명단을 조회합니다. 설정·배정 입력 화면은 작성 중 내용을 보호하기 위해 자동 갱신하지 않습니다.
 
-쿠키 세션은 서버 메모리에 보관하므로 서버 재시작 시 다시 로그인해야 합니다. 데이터·서명·PDF는 Supabase에 남습니다. 현재 버전은 서버 한 개를 지속 실행하는 배포를 기준으로 하며, 여러 서버나 서버리스 함수에는 공통 세션 저장소가 추가로 필요합니다.
+주소가 같아도 각 브라우저의 localStorage에만 저장하는 구버전은 공유되지 않습니다. Supabase 테이블 생성만으로 구버전이 자동 연결되는 것도 아닙니다. 함수 설정과 새 코드 배포가 모두 필요합니다.
+
+로그인 세션은 `training_sessions`에 토큰의 해시만 저장합니다. 함수가 재시작되거나 다른 인스턴스로 요청이 전달돼도 로그인은 유지되며, 로그아웃하면 DB의 세션을 삭제합니다. 만료 세션은 인증에 사용할 수 없습니다.
+
+정적 공개 폴더에는 화면·CSS·브라우저 라이브러리만 복사합니다. `.env`, 서버 코드, 테스트 데이터는 공개하지 않습니다. 다른 Node.js 호스팅 서비스에서는 기존 `npm start` 방식도 계속 사용할 수 있습니다.
 
 ## 데이터베이스 설계
 
@@ -85,6 +95,7 @@ GitHub는 코드를 보관하는 곳입니다. GitHub에 코드를 올리거나 
 - `training_submissions`: 과목별 이수 확인·서명·부분 저장·제출 시각.
 - `training_audit_logs`: 담당자 수정 이력.
 - `load_training_state`: 기존 snake_case 열을 화면의 camelCase 데이터로 변환하여 읽습니다.
+- `training_sessions`: 서버 간 공유 로그인 세션. 원래 토큰은 저장하지 않고 해시·역할·만료 시각만 저장합니다.
 - `training_documents`: 참여자·교육일·버전별 PDF. PDF는 base64로 DB에 저장하며 공개 Storage 버킷을 사용하지 않습니다.
 - `save_training_state`: 상태와 PDF를 한 트랜잭션에서 저장하고, 다른 기기의 오래된 저장 요청을 거절합니다.
 
@@ -115,6 +126,7 @@ npm run test:e2e
 
 ## 주요 파일
 
+- `netlify.toml`, `netlify/functions/api.mjs`: Netlify 빌드·서버 함수 연결.
 - `server.mjs`: 인증·조회·서명·검증·PDF 생성 API.
 - `supabase-store.mjs`: 서버 전용 Supabase 연결.
 - `supabase/migrations/202610100001_training.sql`: 테이블·RLS·트랜잭션 함수.
