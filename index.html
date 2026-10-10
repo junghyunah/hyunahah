@@ -4,44 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>노인일자리 실외사업단 비대면 교육 이수확인증 시스템</title>
-  
+
   <!-- Fonts: Pretendard for ultra-clean readability -->
-  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  
+
   <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-          },
-          colors: {
-            mint: {
-              pop: '#55db9c',
-              dark: '#1ea86c',
-              light: '#e8faf2',
-            },
-            electric: {
-              blue: '#4da2ff',
-              dark: '#1e73e8',
-              light: '#eef6ff',
-            },
-            carbon: '#1a1d20',
-            mist: '#f4f6f8',
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="/styles.css">
 
   <!-- External Libraries (CDN) -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  
+  <script src="/vendor/lucide.js"></script>
+  <script src="/vendor/xlsx.js"></script>
+  <script src="/vendor/pdf-lib.js"></script>
+  <script src="/vendor/jszip.js"></script>
+
   <!-- Base64 Official PDF Template (2026 이수확인증 서식) -->
   <script src="pdf_template_b64.js"></script>
 
@@ -51,11 +25,11 @@
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    
+
     .elderly-card {
       box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
     }
-    
+
     .touch-target {
       min-height: 54px;
     }
@@ -72,7 +46,7 @@
   <!-- Top Global Header -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      
+
       <!-- Logo & Title -->
       <div class="flex items-center space-x-3 cursor-pointer" onclick="switchMode('participant')">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-200">
@@ -104,7 +78,7 @@
 
   <!-- Main View Container -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-    
+
     <!-- ========================================================================= -->
     <!-- VIEW 1: PARTICIPANT MODE (어르신 화면 - 고대비, 큰 글씨, 모바일 최적화) -->
     <!-- ========================================================================= -->
@@ -129,8 +103,8 @@
 
           <div>
             <label class="block text-slate-800 text-lg font-bold mb-1">생년월일</label>
-            <p class="text-xs text-slate-500 mb-2">6자리(예: 520315) 또는 8자리(19520315)</p>
-            <input type="text" id="partInputBirth" required placeholder="예: 520315 또는 19520315" maxlength="8"
+            <p class="text-xs text-slate-500 mb-2">6자리(예: 19520315) 또는 8자리(19520315)</p>
+            <input type="text" id="partInputBirth" required placeholder="예: 19520315" maxlength="8"
                    class="w-full text-xl px-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none font-medium transition" />
           </div>
 
@@ -154,7 +128,7 @@
 
       <!-- STEP 2: Participant Course Completion & Signature Form -->
       <div id="participantCourseCard" class="hidden max-w-2xl mx-auto space-y-6">
-        
+
         <!-- Participant Greeting Banner -->
         <div class="bg-white rounded-3xl p-6 border border-slate-200 elderly-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="flex items-center space-x-4">
@@ -201,12 +175,12 @@
             <span>부정 이수 방지 서약 안내 (필독)</span>
           </div>
           <p class="text-sm sm:text-base text-slate-800 leading-relaxed font-medium bg-white/80 p-4 rounded-2xl border border-amber-200">
-            "본인은 <b>2026년 노인 일자리 및 사회활동 지원사업 참여자</b>로서 아래 교육을 이수하였음을 확인합니다. 
-            <span class="text-red-700 font-bold underline">교육을 이수하지 않고 일괄 서명하는 등 부정한 행위가 확인될 경우 향후 활동비 환수 등의 조치</span>를 취할 수 있으며, 
+            "본인은 <b>2026년 노인 일자리 및 사회활동 지원사업 참여자</b>로서 아래 교육을 이수하였음을 확인합니다.
+            <span class="text-red-700 font-bold underline">교육을 이수하지 않고 일괄 서명하는 등 부정한 행위가 확인될 경우 향후 활동비 환수 등의 조치</span>를 취할 수 있으며,
             이에 대한 모든 책임은 본인에게 있음을 확인합니다."
           </p>
           <p class="text-xs text-amber-700 font-semibold">
-            ※ 참여자 서명 시 정자로 본인 이름을 명확하게 써주셔야 공식 인정됩니다.
+            ※ 본인 이름을 정자로 써주세요. 전자서명 인정 기준은 담당자가 기관에 확인합니다.
           </p>
         </div>
 
@@ -234,7 +208,7 @@
             <i data-lucide="file-check-2" class="w-6 h-6"></i>
             <span>오늘 교육 이수확인증 최종 제출하기</span>
           </button>
-          
+
           <p class="text-xs text-center text-slate-400">
             * 늦게 제출하셔도 실제학습일 칸에는 담당자가 배정한 교육일이 공식 등록됩니다.
           </p>
@@ -248,7 +222,7 @@
           <i data-lucide="check-circle" class="w-12 h-12 stroke-[2.5]"></i>
         </div>
         <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">이수확인증 제출이 완료되었습니다!</h2>
-        
+
         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-sm space-y-2">
           <div class="flex justify-between">
             <span class="text-slate-500 font-medium">참여자 성함</span>
@@ -308,7 +282,7 @@
         <form onsubmit="handleAdminLogin(event)" class="space-y-4">
           <div>
             <label class="block text-slate-700 text-sm font-bold mb-2">담당자 비밀번호</label>
-            <input type="password" id="adminInputPassword" required placeholder="비밀번호 입력 (초기: admin1234)"
+            <input type="password" id="adminInputPassword" required placeholder="비밀번호 입력 (담당자 비밀번호)"
                    class="w-full text-base px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none font-medium transition" />
           </div>
 
@@ -322,7 +296,7 @@
             <i data-lucide="arrow-right" class="w-5 h-5"></i>
           </button>
         </form>
-        <p class="text-xs text-center text-slate-400 mt-4">초기 비밀번호: <code class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-mono">admin1234</code></p>
+        <p class="text-xs text-center text-slate-400 mt-4">서버에서 설정한 담당자 비밀번호를 입력해주세요.</p>
       </div>
 
       <!-- Admin Authenticated Main Workspace -->
@@ -350,10 +324,7 @@
           </div>
 
           <div class="flex items-center space-x-2">
-            <button onclick="loadSampleDemoData()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition flex items-center space-x-1">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-              <span>가상 실외사업단 샘플 로드</span>
-            </button>
+
             <button onclick="handleAdminLogout()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center space-x-1">
               <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
               <span>로그아웃</span>
@@ -363,7 +334,7 @@
 
         <!-- TAB 1: 이수 현황 및 발급 (Dashboard & Certificate Generation) -->
         <div id="adminTabContent-status" class="space-y-6">
-          
+
           <!-- Summary Metric Cards -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -452,9 +423,9 @@
 
         <!-- TAB 2: 교육 배정 관리 (Strict 3 Hours Daily Allocation) -->
         <div id="adminTabContent-assign" class="hidden space-y-6">
-          
+
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+
             <!-- Left 2 Cols: New Daily Assignment Creator -->
             <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
               <div class="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -593,7 +564,7 @@
 
         <!-- TAB 3: 참여자 명단 관리 (Participants & Excel Upload) -->
         <div id="adminTabContent-participants" class="hidden space-y-6">
-          
+
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 class="text-lg font-bold text-slate-900">참여자 명단 관리</h3>
@@ -644,9 +615,9 @@
 
         <!-- TAB 4: 설정 및 백업 (Settings, Password, Backup) -->
         <div id="adminTabContent-settings" class="hidden space-y-6">
-          
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
+
             <!-- Org & Department Settings -->
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
               <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
@@ -680,9 +651,9 @@
                 <span>공식 이수확인증 서식 (PDF) 관리</span>
               </h3>
               <p class="text-xs text-slate-500">
-                현재 시스템에 공식 원본 서식 <b>(양식)+2026년+이수확인증_수정.pdf</b>가 내장되어 있어 별도 서버 없이 오프라인에서도 PDF가 정상 생성됩니다.
+                현재 시스템에 공식 원본 서식 <b>(양식)+2026년+이수확인증_수정.pdf</b>를 보존하여 서버에서 PDF를 생성하고 Supabase에 저장합니다.
               </p>
-              
+
               <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                   <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
@@ -693,7 +664,7 @@
 
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">서식 PDF 교체 (선택 사항)</label>
-                <input type="file" id="customPdfFileInput" accept="application/pdf" onchange="handleCustomPdfUpload(event)" class="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+                <p>공식 원본 양식은 변경할 수 없습니다.</p>
               </div>
             </div>
 
@@ -719,10 +690,7 @@
                   <input type="file" accept=".json" onchange="importDataBackup(event)" class="hidden">
                 </label>
 
-                <button onclick="handleResetAllData()" class="px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-50 text-xs font-bold transition flex items-center space-x-1.5 ml-auto">
-                  <i data-lucide="trash-2" class="w-4 h-4"></i>
-                  <span>전체 데이터 초기화</span>
-                </button>
+
               </div>
             </div>
 
@@ -757,8 +725,8 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">생년월일 (6자리 또는 8자리) *</label>
-          <input type="text" id="addPartBirth" required placeholder="예: 520315 또는 19520315" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+          <label class="block text-xs font-bold text-slate-700 mb-1">생년월일 (8자리) *</label>
+          <input type="text" id="addPartBirth" required placeholder="예: 19520315" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
         </div>
 
         <div>
@@ -793,7 +761,7 @@
       </div>
 
       <p class="text-xs text-slate-500">
-        엑셀 파일(.xlsx, .xls)을 업로드하면 여러 명의 참여자를 한 번에 등록할 수 있습니다. 
+        엑셀 파일(.xlsx, .xls)을 업로드하면 여러 명의 참여자를 한 번에 등록할 수 있습니다.
         동일한 [성함 + 생년월일] 중복 행은 자동으로 검출됩니다.
       </p>
 
@@ -863,7 +831,7 @@
       </div>
 
       <p class="text-xs text-slate-500">
-        PRD 요구사항: 수정 시 원래 기록과 사유가 보존되며 새 서명을 무단 복제하지 않습니다. 
+        PRD 요구사항: 수정 시 원래 기록과 사유가 보존되며 새 서명을 무단 복제하지 않습니다.
         총 시간은 반드시 <b>3시간</b>이어야 합니다.
       </p>
 
@@ -916,15 +884,13 @@
       { id: 17, group: '단독', name: '노인일자리 적응하기', hours: 1, rowIdx: 17 }
     ];
 
-    // Storage Key
-    const STORAGE_KEY = 'SENIOR_JOB_TRAINING_APP_DATA_V1';
 
     // Global App State
     let AppState = {
       settings: {
         orgName: '행복노인종합복지관',
         depts: ['공원환경개선', '지역사회환경개선'],
-        adminPassword: 'admin1234'
+
       },
       participants: [], // { id, name, birthDate, dept, phone, createdAt }
       assignments: [],  // { id, targetType, targetDept, participantId, assignDate, courseIds, totalHours, createdAt }
@@ -947,8 +913,8 @@
     /* ==========================================================================
        2. INITIALIZATION & DATA PERSISTENCE
        ========================================================================== */
-    window.addEventListener('DOMContentLoaded', () => {
-      loadStateFromStorage();
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadStateFromStorage();
       initLucide();
       renderAssignCourseGrid();
       updateHeaderOrg();
@@ -968,28 +934,9 @@
       }
     }
 
-    function saveStateToStorage() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(AppState));
-      } catch (err) {
-        console.error('Storage save error:', err);
-      }
-    }
+    function saveStateToStorage() { /* Implemented in client.js using authenticated server APIs. */ }
 
-    function loadStateFromStorage() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          AppState = Object.assign(AppState, parsed);
-        } else {
-          // If no state exists, load initial demo data for smooth experience
-          loadSampleDemoData(false);
-        }
-      } catch (err) {
-        console.error('Storage load error:', err);
-      }
-    }
+    function loadStateFromStorage() { /* Implemented in client.js using authenticated server APIs. */ }
 
     function updateHeaderOrg() {
       const el = document.getElementById('headerOrgName');
@@ -1074,32 +1021,7 @@
       return birth;
     }
 
-    function handleParticipantLogin(event) {
-      event.preventDefault();
-      const name = document.getElementById('partInputName').value.trim();
-      const birth = normalizeBirthDate(document.getElementById('partInputBirth').value.trim());
-      const errBox = document.getElementById('partLoginError');
-
-      if (!name || !birth) {
-        errBox.classList.remove('hidden');
-        document.getElementById('partLoginErrorMsg').innerText = '성함과 생년월일을 모두 입력해주세요.';
-        return;
-      }
-
-      // Exact match check against registered participants
-      const found = AppState.participants.find(p => p.name === name && normalizeBirthDate(p.birthDate) === birth);
-      if (!found) {
-        errBox.classList.remove('hidden');
-        document.getElementById('partLoginErrorMsg').innerText = '등록된 참여자 정보를 찾을 수 없습니다. 이름과 생년월일을 다시 확인해주세요. (문의: 담당자)';
-        return;
-      }
-
-      errBox.classList.add('hidden');
-      currentParticipant = found;
-
-      // Find assignments for this participant (either individual or department-wide)
-      loadParticipantAssignments();
-    }
+    function handleParticipantLogin() { /* Implemented in client.js using authenticated server APIs. */ }
 
     function loadParticipantAssignments() {
       if (!currentParticipant) return;
@@ -1257,6 +1179,7 @@
         img.onload = () => {
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           hasDrawn = true;
+          updateParticipantProgressBar();
         };
         img.src = initialDataUrl;
       }
@@ -1349,70 +1272,7 @@
       }
     }
 
-    function handleParticipantFinalSubmit() {
-      if (!currentParticipant || !currentAssignment) return;
-
-      const total = currentAssignment.courseIds.length;
-      const completedCourseIds = [];
-      const signatures = {};
-
-      for (const cId of currentAssignment.courseIds) {
-        const chk = document.getElementById(`checkCourse-${cId}`);
-        const pad = activeSignaturePads[cId];
-        const isChecked = chk && chk.checked;
-        const isSigned = pad && pad.hasDrawn();
-
-        if (!isChecked || !isSigned) {
-          const alertBox = document.getElementById('partSubmitAlert');
-          alertBox.classList.remove('hidden');
-          document.getElementById('partSubmitAlertMsg').innerText = `과목 [${OFFICIAL_COURSES.find(c => c.id === cId).name}]의 이수 확인 체크와 정자 서명이 누락되었습니다. 모두 완료해주세요.`;
-          return;
-        }
-
-        completedCourseIds.push(cId);
-        signatures[cId] = pad.getDataUrl();
-      }
-
-      // Hide alert
-      document.getElementById('partSubmitAlert').classList.add('hidden');
-
-      // Now create or update submission
-      const now = new Date();
-      const submitTimeKST = now.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
-
-      let existingSub = AppState.submissions.find(s => s.participantId === currentParticipant.id && s.assignDate === currentAssignment.assignDate);
-      if (existingSub) {
-        existingSub.completedCourseIds = completedCourseIds;
-        existingSub.signatures = signatures;
-        existingSub.submittedAt = submitTimeKST;
-      } else {
-        existingSub = {
-          id: 'sub_' + Date.now(),
-          participantId: currentParticipant.id,
-          assignmentId: currentAssignment.id,
-          assignDate: currentAssignment.assignDate,
-          completedCourseIds,
-          signatures,
-          submittedAt: submitTimeKST,
-          reviewed: false,
-          reviewedAt: null
-        };
-        AppState.submissions.push(existingSub);
-      }
-
-      saveStateToStorage();
-
-      // Show Success Card
-      document.getElementById('participantCourseCard').classList.add('hidden');
-      document.getElementById('participantSuccessCard').classList.remove('hidden');
-
-      document.getElementById('successPartName').innerText = currentParticipant.name;
-      document.getElementById('successPartDept').innerText = currentParticipant.dept;
-      document.getElementById('successAssignDate').innerText = currentAssignment.assignDate.replace(/-/g, '. ');
-      document.getElementById('successSubmitTime').innerText = submitTimeKST;
-
-      showToast('이수확인증 제출이 정상 완료되었습니다!', 'success');
-    }
+    function handleParticipantFinalSubmit() { /* Implemented in client.js using authenticated server APIs. */ }
 
     function handleParticipantLogout() {
       currentParticipant = null;
@@ -1428,28 +1288,9 @@
     /* ==========================================================================
        5. ADMIN MANAGER DASHBOARD LOGIC
        ========================================================================== */
-    function handleAdminLogin(event) {
-      event.preventDefault();
-      const pwd = document.getElementById('adminInputPassword').value;
-      const errBox = document.getElementById('adminLoginError');
+    function handleAdminLogin() { /* Implemented in client.js using authenticated server APIs. */ }
 
-      if (pwd === AppState.settings.adminPassword) {
-        isAdminLoggedIn = true;
-        errBox.classList.add('hidden');
-        document.getElementById('adminLoginCard').classList.add('hidden');
-        document.getElementById('adminWorkspace').classList.remove('hidden');
-        renderAdminViews();
-      } else {
-        errBox.classList.remove('hidden');
-      }
-    }
-
-    function handleAdminLogout() {
-      isAdminLoggedIn = false;
-      document.getElementById('adminWorkspace').classList.add('hidden');
-      document.getElementById('adminLoginCard').classList.remove('hidden');
-      document.getElementById('adminInputPassword').value = '';
-    }
+    function handleAdminLogout() { /* Implemented in client.js using authenticated server APIs. */ }
 
     function renderAdminViews() {
       if (!isAdminLoggedIn) return;
@@ -1554,7 +1395,7 @@
           </span>`;
         }
 
-        const reviewedBadge = r.sub && r.sub.reviewed 
+        const reviewedBadge = r.sub && r.sub.reviewed
           ? `<span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">검토완료</span>`
           : (r.isComplete ? `<button onclick="toggleManagerReview('${r.sub.id}')" class="text-xs font-semibold px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200">검토확인</button>` : `<span class="text-xs text-slate-400">-</span>`);
 
@@ -1572,7 +1413,7 @@
 
         tr.innerHTML = `
           <td class="p-4">
-            <input type="checkbox" class="row-checkbox rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" 
+            <input type="checkbox" class="row-checkbox rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                    data-part-id="${r.part.id}" data-date="${r.assign.assignDate}" ${!r.isComplete ? 'disabled' : ''}>
           </td>
           <td class="p-4">
@@ -1602,22 +1443,13 @@
       initLucide();
     }
 
-    function toggleSelectAllRows(checked) {
+    async function toggleSelectAllRows(checked) {
       document.querySelectorAll('.row-checkbox:not(:disabled)').forEach(cb => {
         cb.checked = checked;
       });
     }
 
-    function toggleManagerReview(submissionId) {
-      const sub = AppState.submissions.find(s => s.id === submissionId);
-      if (sub) {
-        sub.reviewed = !sub.reviewed;
-        sub.reviewedAt = sub.reviewed ? new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : null;
-        saveStateToStorage();
-        renderAdminViews();
-        showToast(sub.reviewed ? '담당자 검토가 완료되었습니다.' : '검토가 취소되었습니다.', 'info');
-      }
-    }
+    function toggleManagerReview() { /* Implemented in client.js using authenticated server APIs. */ }
 
     /* --- Course Assignment Manager (Strict 3 Hours Daily Rule) --- */
     function renderAssignCourseGrid() {
@@ -1694,7 +1526,7 @@
       });
     }
 
-    function handleCreateAssignment() {
+    async function handleCreateAssignment() {
       const targetType = document.querySelector('input[name="assignTargetType"]:checked').value;
       const assignDate = document.getElementById('assignDateInput').value;
       if (!assignDate) {
@@ -1732,7 +1564,7 @@
       };
 
       AppState.assignments.push(newAssign);
-      saveStateToStorage();
+      await saveStateToStorage();
       renderAdminViews();
 
       showToast(`2026년 ${assignDate} 교육 배정(3시간)이 등록되었습니다.`, 'success');
@@ -1788,10 +1620,10 @@
       });
     }
 
-    function handleDeleteAssignment(assignId) {
+    async function handleDeleteAssignment(assignId) {
       if (!confirm('이 교육 배정을 삭제하시겠습니까? 관련된 참여자의 미제출 배정 내역도 함께 정리됩니다.')) return;
       AppState.assignments = AppState.assignments.filter(a => a.id !== assignId);
-      saveStateToStorage();
+      await saveStateToStorage();
       renderAdminViews();
       showToast('교육 배정이 삭제되었습니다.', 'info');
     }
@@ -1832,7 +1664,7 @@
       });
     }
 
-    function handleAddParticipantSubmit(event) {
+    async function handleAddParticipantSubmit(event) {
       event.preventDefault();
       const name = document.getElementById('addPartName').value.trim();
       const rawBirth = document.getElementById('addPartBirth').value.trim();
@@ -1862,14 +1694,14 @@
       };
 
       AppState.participants.push(newPart);
-      saveStateToStorage();
+      await saveStateToStorage();
       closeModal('modalAddParticipant');
       renderAdminViews();
 
       showToast(`참여자 [${name}] 어르신이 등록되었습니다.`, 'success');
     }
 
-    function handleDeleteParticipant(partId) {
+    async function handleDeleteParticipant(partId) {
       const part = AppState.participants.find(p => p.id === partId);
       if (!part) return;
       if (!confirm(`[${part.name}] 어르신을 삭제하시겠습니까? 관련 이수 기록도 모두 삭제됩니다.`)) return;
@@ -1878,7 +1710,7 @@
       AppState.submissions = AppState.submissions.filter(s => s.participantId !== partId);
       AppState.assignments = AppState.assignments.filter(a => !(a.targetType === 'individual' && a.participantId === partId));
 
-      saveStateToStorage();
+      await saveStateToStorage();
       renderAdminViews();
       showToast('참여자가 삭제되었습니다.', 'info');
     }
@@ -1903,7 +1735,7 @@
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
@@ -1944,7 +1776,9 @@
           excelParsedCandidates.forEach(c => {
             const rowDiv = document.createElement('div');
             rowDiv.className = "flex justify-between py-1 text-slate-700 " + (c.isDuplicate ? "text-slate-400 line-through" : "");
-            rowDiv.innerHTML = `<span>${c.name} (${c.dept})</span><span class="font-mono">${formatBirthDisplay(c.birthDate)}</span>`;
+            const identity = document.createElement('span'); identity.textContent = `${c.name} (${c.dept})`;
+            const birthLabel = document.createElement('span'); birthLabel.className='font-mono'; birthLabel.textContent = formatBirthDisplay(c.birthDate);
+            rowDiv.append(identity,birthLabel);
             listEl.appendChild(rowDiv);
           });
 
@@ -1959,7 +1793,7 @@
       reader.readAsArrayBuffer(file);
     }
 
-    function handleConfirmExcelUpload() {
+    async function handleConfirmExcelUpload() {
       const valid = excelParsedCandidates.filter(c => !c.isDuplicate);
       if (valid.length === 0) return;
 
@@ -1974,7 +1808,7 @@
         });
       });
 
-      saveStateToStorage();
+      await saveStateToStorage();
       closeModal('modalExcelUpload');
       renderAdminViews();
 
@@ -1982,7 +1816,7 @@
     }
 
     /* --- Settings & Backup --- */
-    function saveAdminSettings() {
+    async function saveAdminSettings() {
       const orgName = document.getElementById('settingOrgNameInput').value.trim();
       const depts = document.getElementById('settingDeptsInput').value.split(',').map(s => s.trim()).filter(Boolean);
       const newPwd = document.getElementById('settingAdminPasswordInput').value.trim();
@@ -1991,7 +1825,7 @@
       if (depts.length > 0) AppState.settings.depts = depts;
       if (newPwd) AppState.settings.adminPassword = newPwd;
 
-      saveStateToStorage();
+      await saveStateToStorage();
       updateHeaderOrg();
       showToast('기관 및 관리자 설정이 저장되었습니다.', 'success');
     }
@@ -2004,49 +1838,11 @@
       a.click();
     }
 
-    function importDataBackup(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+    function importDataBackup() { /* Implemented in client.js using authenticated server APIs. */ }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const parsed = JSON.parse(e.target.result);
-          if (parsed.participants && parsed.assignments) {
-            AppState = parsed;
-            saveStateToStorage();
-            updateHeaderOrg();
-            renderAdminViews();
-            showToast('백업 데이터가 성공적으로 복원되었습니다.', 'success');
-          } else {
-            showToast('올바른 백업 파일 형식이 아닙니다.', 'alert');
-          }
-        } catch (err) {
-          showToast('백업 파일 해석 중 오류가 발생했습니다.', 'alert');
-        }
-      };
-      reader.readAsText(file);
-    }
+    function handleResetAllData() { /* Implemented in client.js using authenticated server APIs. */ }
 
-    function handleResetAllData() {
-      if (!confirm('정말로 모든 참여자 명단, 교육 배정 및 이수확인증 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-      localStorage.removeItem(STORAGE_KEY);
-      location.reload();
-    }
-
-    function handleCustomPdfUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target.result.split(',')[1];
-        AppState.customPdfBase64 = base64;
-        saveStateToStorage();
-        showToast('사용자 지정 공식 양식 PDF가 등록되었습니다.', 'success');
-      };
-      reader.readAsDataURL(file);
-    }
+    function handleCustomPdfUpload() { /* Implemented in client.js using authenticated server APIs. */ }
 
     /* ==========================================================================
        6. OFFICIAL PDF CONFIRMATION GENERATION ENGINE (PDF-LIB + HIGH-RES CANVAS)
@@ -2073,130 +1869,14 @@
     /**
      * Generates the official completed confirmation PDF Uint8Array for a given participant and date
      */
-    async function generateConfirmationPdfBytes(participantId, assignDate) {
-      const part = AppState.participants.find(p => p.id === participantId);
-      if (!part) throw new Error('Participant not found');
-
-      const assign = AppState.assignments.find(a => {
-        if (a.assignDate !== assignDate) return false;
-        if (a.targetType === 'individual' && a.participantId === participantId) return true;
-        if (a.targetType === 'dept' && a.targetDept === part.dept) return true;
-        return false;
-      });
-      if (!assign) throw new Error('Assignment not found');
-
-      const sub = AppState.submissions.find(s => s.participantId === participantId && s.assignDate === assignDate);
-      if (!sub) throw new Error('Submission not found');
-
-      // 1. Get base template PDF
-      const pdfBase64 = AppState.customPdfBase64 || window.DEFAULT_PDF_BASE64;
-      if (!pdfBase64) {
-        throw new Error('Template PDF is missing. Please upload the template PDF.');
-      }
-
-      const binaryPdf = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
-      const pdfDoc = await PDFLib.PDFDocument.load(binaryPdf);
-      const pages = pdfDoc.getPages();
-      const firstPage = pages[0];
-      const { width, height } = firstPage.getSize(); // Standard A4: 595 x 841
-
-      // 2. Embed Header Informations:
-      // Exact PDF coordinates calibrated from Hancom PDF template:
-      // x: colon is at x ≈ 294 pt. Value begins at x ≈ 305 pt.
-      // y positions:
-      // 기관명   : y ≈ 684 pt
-      // 사업단명 : y ≈ 663 pt
-      // 생년월일 : y ≈ 642 pt
-      // 성명     : y ≈ 621 pt
-      
-      const headerFields = [
-        { text: AppState.settings.orgName, x: 305, y: 680, width: 200, height: 20, fontSize: 13 },
-        { text: part.dept,                 x: 305, y: 659, width: 200, height: 20, fontSize: 13 },
-        { text: formatBirthDisplay(part.birthDate), x: 305, y: 638, width: 200, height: 20, fontSize: 13 },
-        { text: part.name,                 x: 305, y: 617, width: 200, height: 20, fontSize: 14, isBold: true }
-      ];
-
-      for (const field of headerFields) {
-        const pngUrl = createTextOverlayImage(field.text, field.fontSize, field.isBold || false, '#0f172a', field.width, field.height);
-        const pngImage = await pdfDoc.embedPng(pngUrl);
-        firstPage.drawImage(pngImage, {
-          x: field.x,
-          y: field.y,
-          width: field.width,
-          height: field.height
-        });
-      }
-
-      // 3. Calibrated Row Positions for 17 Table Rows
-      // Each course row in the official PDF has exact vertical center:
-      const ROW_Y_COORDS = {
-        1: 504,  // 안전사고예방워크북
-        2: 482,  // 안전교육1과정
-        3: 459,  // 안전교육2과정
-        4: 437,  // 안전교육3과정
-        5: 414,  // 안전교육4과정
-        6: 391,  // 노인일자리 화상예방교육
-        7: 369,  // 노인 화상예방송
-        8: 346,  // 노인일자리참여자 활동 중 화상예방안전교육
-        9: 324,  // 안전사례1
-        10: 301, // 안전사례2
-        11: 279, // 안전워크북 1
-        12: 256, // 안전워크북 2
-        13: 234, // 안전워크북 3
-        14: 211, // 인권교육
-        15: 189, // 성희롱예방교육
-        16: 167, // 노인일자리의 이해
-        17: 144  // 노인일자리 적응하기
-      };
-
-      // Format Date: e.g. "2026. 04. 15"
-      const dateParts = assignDate.split('-');
-      const year = dateParts[0];
-      const month = dateParts[1];
-      const day = dateParts[2];
-      const formattedDateString = `${year}.  ${month}.  ${day}`;
-
-      // 4. Draw Date and Participant Signatures onto Table Rows
-      // Only for completed courses!
-      for (const courseId of (sub.completedCourseIds || [])) {
-        const yCenter = ROW_Y_COORDS[courseId];
-        if (!yCenter) continue;
-
-        // Draw Actual Learning Date in "실제학습일" column (x ≈ 286 to 376, center ≈ 330)
-        const datePngUrl = createTextOverlayImage(formattedDateString, 11, true, '#1e293b', 90, 18);
-        const datePng = await pdfDoc.embedPng(datePngUrl);
-        firstPage.drawImage(datePng, {
-          x: 288,
-          y: yCenter - 6,
-          width: 86,
-          height: 18
-        });
-
-        // Draw Signature in "참여자 서명" column (x ≈ 378 to 550, center ≈ 460)
-        const sigDataUrl = sub.signatures && sub.signatures[courseId];
-        if (sigDataUrl) {
-          const sigPng = await pdfDoc.embedPng(sigDataUrl);
-          // Scale nicely within row height (max height ≈ 20, max width ≈ 100)
-          const sigWidth = 90;
-          const sigHeight = 22;
-          firstPage.drawImage(sigPng, {
-            x: 418,
-            y: yCenter - 8,
-            width: sigWidth,
-            height: sigHeight
-          });
-        }
-      }
-
-      return await pdfDoc.save();
-    }
+    function generateConfirmationPdfBytes() { /* Implemented in client.js using authenticated server APIs. */ }
 
     async function handleDownloadSinglePdf(participantId, assignDate) {
       try {
         showToast('이수확인증 PDF 생성 중...', 'info');
         const pdfBytes = await generateConfirmationPdfBytes(participantId, assignDate);
         const part = AppState.participants.find(p => p.id === participantId);
-        
+
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -2330,80 +2010,7 @@
     /* ==========================================================================
        7. DEMO SAMPLE DATA (실외사업단 2개소 + 참여자 10명 + 배정 + 서명 샘플)
        ========================================================================== */
-    function loadSampleDemoData(showToastAlert = true) {
-      AppState.settings = {
-        orgName: '행복노인종합복지관',
-        depts: ['공원환경개선', '지역사회환경개선'],
-        adminPassword: 'admin1234'
-      };
-
-      AppState.participants = [
-        { id: 'p_demo_1', name: '김순자', birthDate: '19520315', dept: '공원환경개선', phone: '010-1111-2222', createdAt: '2026-03-01' },
-        { id: 'p_demo_2', name: '박영철', birthDate: '19510512', dept: '공원환경개선', phone: '010-2222-3333', createdAt: '2026-03-01' },
-        { id: 'p_demo_3', name: '이정숙', birthDate: '19540820', dept: '공원환경개선', phone: '010-3333-4444', createdAt: '2026-03-01' },
-        { id: 'p_demo_4', name: '정태수', birthDate: '19501104', dept: '공원환경개선', phone: '010-4444-5555', createdAt: '2026-03-01' },
-        { id: 'p_demo_5', name: '최옥분', birthDate: '19530918', dept: '공원환경개선', phone: '010-5555-6666', createdAt: '2026-03-01' },
-        { id: 'p_demo_6', name: '홍길동', birthDate: '19520425', dept: '지역사회환경개선', phone: '010-6666-7777', createdAt: '2026-03-01' },
-        { id: 'p_demo_7', name: '강명희', birthDate: '19550110', dept: '지역사회환경개선', phone: '010-7777-8888', createdAt: '2026-03-01' },
-        { id: 'p_demo_8', name: '윤석진', birthDate: '19491203', dept: '지역사회환경개선', phone: '010-8888-9999', createdAt: '2026-03-01' },
-        { id: 'p_demo_9', name: '오미자', birthDate: '19530714', dept: '지역사회환경개선', phone: '010-9999-0000', createdAt: '2026-03-01' },
-        { id: 'p_demo_10', name: '한상우', birthDate: '19510629', dept: '지역사회환경개선', phone: '010-1010-2020', createdAt: '2026-03-01' }
-      ];
-
-      // Two sample assignments (3 hours each)
-      // Assignment 1: 공원환경개선 (2026-04-15) -> 안전교육1(1h) + 안전교육2(1h) + 화상예방(1h) = 3h
-      // Assignment 2: 지역사회환경개선 (2026-04-20) -> 안전사고예방워크북(2h) + 인권교육(1h) = 3h
-      AppState.assignments = [
-        {
-          id: 'assign_demo_1',
-          targetType: 'dept',
-          targetDept: '공원환경개선',
-          participantId: null,
-          assignDate: '2026-04-15',
-          courseIds: [2, 3, 6], // 1h + 1h + 1h = 3h
-          totalHours: 3,
-          createdAt: '2026-04-01 09:00:00'
-        },
-        {
-          id: 'assign_demo_2',
-          targetType: 'dept',
-          targetDept: '지역사회환경개선',
-          participantId: null,
-          assignDate: '2026-04-20',
-          courseIds: [1, 14], // 2h + 1h = 3h
-          totalHours: 3,
-          createdAt: '2026-04-01 09:30:00'
-        }
-      ];
-
-      // Sample submission with realistic signatures for demo participant 1 (김순자)
-      const sampleSig = createTextOverlayImage('김순자', 32, true, '#0f172a', 300, 100);
-      AppState.submissions = [
-        {
-          id: 'sub_demo_1',
-          participantId: 'p_demo_1',
-          assignmentId: 'assign_demo_1',
-          assignDate: '2026-04-15',
-          completedCourseIds: [2, 3, 6],
-          signatures: {
-            2: sampleSig,
-            3: sampleSig,
-            6: sampleSig
-          },
-          submittedAt: '2026-04-15 14:32:10',
-          reviewed: true,
-          reviewedAt: '2026-04-16 10:15:00'
-        }
-      ];
-
-      saveStateToStorage();
-      updateHeaderOrg();
-      renderAdminViews();
-
-      if (showToastAlert) {
-        showToast('실외사업단 가상 데모 데이터(10명 + 3시간 배정 + 이수완료 1건)가 로드되었습니다.', 'success');
-      }
-    }
+    function loadSampleDemoData() { /* Implemented in client.js using authenticated server APIs. */ }
 
     /* ==========================================================================
        8. MODAL & TOAST HELPERS
@@ -2444,5 +2051,6 @@
       }, 3500);
     }
   </script>
+  <script src="/client.js"></script>
 </body>
 </html>

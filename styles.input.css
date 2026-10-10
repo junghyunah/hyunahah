@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 고령 참여자가 사용하는 화면은 작은 유틸리티 크기보다 우선합니다. */
+#participantView { font-size: 24px; }
+#participantView p, #participantView label, #participantView input, #participantView .text-xs,
+#participantView .text-sm, #participantView .text-base { font-size: 24px; line-height: 1.55; }
+#participantView h2, #participantView h3 { font-size: 28px; }
+#participantView button { min-height: 56px; font-size: 24px; }
+#participantView canvas { height: 190px; touch-action: none; }
+#participantView input[type=checkbox] { min-width: 32px; min-height: 32px; }
+#participantView .text-slate-400, #participantView .text-slate-500 { color: #475569; }
