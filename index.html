@@ -1,0 +1,2448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>노인일자리 실외사업단 비대면 교육 이수확인증 시스템</title>
+  
+  <!-- Fonts: Pretendard for ultra-clean readability -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            mint: {
+              pop: '#55db9c',
+              dark: '#1ea86c',
+              light: '#e8faf2',
+            },
+            electric: {
+              blue: '#4da2ff',
+              dark: '#1e73e8',
+              light: '#eef6ff',
+            },
+            carbon: '#1a1d20',
+            mist: '#f4f6f8',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- External Libraries (CDN) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  
+  <!-- Base64 Official PDF Template (2026 이수확인증 서식) -->
+  <script src="pdf_template_b64.js"></script>
+
+  <style>
+    /* Custom Scrollbar & High Contrast Accessibility */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
+    .elderly-card {
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+    }
+    
+    .touch-target {
+      min-height: 54px;
+    }
+
+    .signature-canvas {
+      touch-action: none;
+      cursor: crosshair;
+      background-color: #ffffff;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 font-sans min-h-screen flex flex-col antialiased selection:bg-mint-pop selection:text-slate-900">
+
+  <!-- Top Global Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Logo & Title -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchMode('participant')">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-200">
+          <i data-lucide="award" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-bold text-lg text-slate-900 tracking-tight leading-none">이수확인증 도구</span>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">실외사업단 전용</span>
+          </div>
+          <p id="headerOrgName" class="text-xs text-slate-500 font-medium leading-tight mt-0.5">행복노인종합복지관</p>
+        </div>
+      </div>
+
+      <!-- Mode Switcher Pill -->
+      <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <button id="modeBtnParticipant" onclick="switchMode('participant')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm">
+          <i data-lucide="user" class="w-4 h-4 text-emerald-600"></i>
+          <span>참여자(어르신)</span>
+        </button>
+        <button id="modeBtnAdmin" onclick="switchMode('admin')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-slate-600 hover:text-slate-900">
+          <i data-lucide="shield-check" class="w-4 h-4 text-slate-500"></i>
+          <span>담당자 관리</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main View Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+    
+    <!-- ========================================================================= -->
+    <!-- VIEW 1: PARTICIPANT MODE (어르신 화면 - 고대비, 큰 글씨, 모바일 최적화) -->
+    <!-- ========================================================================= -->
+    <div id="participantView" class="space-y-6">
+
+      <!-- STEP 1: Participant Identity Verification -->
+      <div id="participantLoginCard" class="max-w-md mx-auto bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 elderly-card mt-4">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-100">
+            <i data-lucide="user-check" class="w-8 h-8"></i>
+          </div>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">어르신 본인 확인</h1>
+          <p class="text-slate-600 mt-2 text-base">비대면 교육 이수를 위해<br><b class="text-emerald-700">성함</b>과 <b class="text-emerald-700">생년월일</b>을 입력해주세요.</p>
+        </div>
+
+        <form onsubmit="handleParticipantLogin(event)" class="space-y-5">
+          <div>
+            <label class="block text-slate-800 text-lg font-bold mb-2">성 함 (이름)</label>
+            <input type="text" id="partInputName" required placeholder="예: 홍길동"
+                   class="w-full text-xl px-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none font-medium transition" />
+          </div>
+
+          <div>
+            <label class="block text-slate-800 text-lg font-bold mb-1">생년월일</label>
+            <p class="text-xs text-slate-500 mb-2">6자리(예: 520315) 또는 8자리(19520315)</p>
+            <input type="text" id="partInputBirth" required placeholder="예: 520315 또는 19520315" maxlength="8"
+                   class="w-full text-xl px-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none font-medium transition" />
+          </div>
+
+          <div id="partLoginError" class="hidden p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium flex items-center space-x-2">
+            <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i>
+            <span id="partLoginErrorMsg">등록된 참여자 정보를 찾을 수 없습니다. 이름과 생년월일을 다시 확인해주세요.</span>
+          </div>
+
+          <button type="submit" class="w-full touch-target bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xl font-bold py-4 rounded-2xl shadow-lg shadow-emerald-200 transition flex items-center justify-center space-x-2">
+            <span>내 교육 확인하기</span>
+            <i data-lucide="arrow-right" class="w-6 h-6"></i>
+          </button>
+        </form>
+
+        <div class="mt-6 pt-5 border-t border-slate-100 text-center">
+          <p class="text-xs text-slate-400">
+            ※ 동명이인 구분 및 확인을 위한 정보 대조이며, 타인의 정보는 절대 조회되지 않습니다.
+          </p>
+        </div>
+      </div>
+
+      <!-- STEP 2: Participant Course Completion & Signature Form -->
+      <div id="participantCourseCard" class="hidden max-w-2xl mx-auto space-y-6">
+        
+        <!-- Participant Greeting Banner -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200 elderly-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center space-x-4">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-2xl flex-shrink-0">
+              <span id="partGreetingAvatar">홍</span>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <span id="partGreetingName" class="text-2xl font-bold text-slate-900">홍길동 어르신</span>
+                <span class="text-sm font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700" id="partGreetingBirth">1952.03.15</span>
+              </div>
+              <p class="text-slate-600 font-semibold text-base mt-0.5">
+                소속: <span id="partGreetingDept" class="text-emerald-700 font-bold">공원환경개선 사업단</span>
+              </p>
+            </div>
+          </div>
+          <button onclick="handleParticipantLogout()" class="self-end sm:self-center px-3.5 py-2 rounded-xl text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 text-sm font-semibold transition flex items-center space-x-1.5">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+            <span>종료(나가기)</span>
+          </button>
+        </div>
+
+        <!-- Assignment Header & Notice Banner -->
+        <div class="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-3xl p-6 text-white shadow-lg shadow-emerald-900/10 space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold uppercase tracking-wider">비대면 교육 이수</span>
+              <span id="partAssignDateBadge" class="text-emerald-100 font-bold text-base">배정일: 2026년 04월 15일</span>
+            </div>
+            <div class="text-xs bg-black/25 px-3 py-1 rounded-full font-medium">
+              하루 정확히 3시간 배정
+            </div>
+          </div>
+          <h2 class="text-2xl font-extrabold tracking-tight">비대면 안전 및 직무 교육 이수확인</h2>
+          <p class="text-emerald-50 text-sm leading-relaxed">
+            아래 배정된 교육을 시청·학습하신 후, 과목별로 <b class="text-white underline">이수 확인 체크</b>와 <b class="text-white underline">정자 서명</b>을 작성하여 주시기 바랍니다.
+          </p>
+        </div>
+
+        <!-- Official Legal Warning Notice (원본 양식 문구 보존 및 큰 글씨 강조) -->
+        <div class="bg-amber-50 border-2 border-amber-300 rounded-3xl p-5 text-amber-950 space-y-2">
+          <div class="flex items-center space-x-2 text-amber-800 font-bold text-lg">
+            <i data-lucide="alert-triangle" class="w-6 h-6 text-amber-600 flex-shrink-0"></i>
+            <span>부정 이수 방지 서약 안내 (필독)</span>
+          </div>
+          <p class="text-sm sm:text-base text-slate-800 leading-relaxed font-medium bg-white/80 p-4 rounded-2xl border border-amber-200">
+            "본인은 <b>2026년 노인 일자리 및 사회활동 지원사업 참여자</b>로서 아래 교육을 이수하였음을 확인합니다. 
+            <span class="text-red-700 font-bold underline">교육을 이수하지 않고 일괄 서명하는 등 부정한 행위가 확인될 경우 향후 활동비 환수 등의 조치</span>를 취할 수 있으며, 
+            이에 대한 모든 책임은 본인에게 있음을 확인합니다."
+          </p>
+          <p class="text-xs text-amber-700 font-semibold">
+            ※ 참여자 서명 시 정자로 본인 이름을 명확하게 써주셔야 공식 인정됩니다.
+          </p>
+        </div>
+
+        <!-- Course List Form (과목별 체크 & 정자 서명 패드) -->
+        <div id="partCourseListContainer" class="space-y-6">
+          <!-- Dynamically populated course items -->
+        </div>
+
+        <!-- Final Submission Action -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200 elderly-card space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-base font-bold text-slate-700">이수 진행률</span>
+            <span id="partProgressText" class="text-base font-extrabold text-emerald-700">0 / 3 과목 완료</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+            <div id="partProgressBar" class="bg-emerald-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+
+          <div id="partSubmitAlert" class="hidden p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 font-medium text-sm flex items-center space-x-2">
+            <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i>
+            <span id="partSubmitAlertMsg">모든 과목의 이수 확인 체크와 정자 서명을 작성하셔야 제출하실 수 있습니다.</span>
+          </div>
+
+          <button id="partFinalSubmitBtn" onclick="handleParticipantFinalSubmit()" class="w-full touch-target bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xl font-bold py-4 rounded-2xl shadow-lg shadow-emerald-200 transition flex items-center justify-center space-x-2">
+            <i data-lucide="file-check-2" class="w-6 h-6"></i>
+            <span>오늘 교육 이수확인증 최종 제출하기</span>
+          </button>
+          
+          <p class="text-xs text-center text-slate-400">
+            * 늦게 제출하셔도 실제학습일 칸에는 담당자가 배정한 교육일이 공식 등록됩니다.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- STEP 3: Submission Success Card -->
+      <div id="participantSuccessCard" class="hidden max-w-lg mx-auto bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 elderly-card text-center space-y-5">
+        <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+          <i data-lucide="check-circle" class="w-12 h-12 stroke-[2.5]"></i>
+        </div>
+        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">이수확인증 제출이 완료되었습니다!</h2>
+        
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-sm space-y-2">
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">참여자 성함</span>
+            <span id="successPartName" class="font-bold text-slate-900">홍길동</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">소속 사업단</span>
+            <span id="successPartDept" class="font-bold text-slate-900">공원환경개선</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">공식 학습 인정일</span>
+            <span id="successAssignDate" class="font-bold text-emerald-700">2026. 04. 15</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">실제 제출 일시</span>
+            <span id="successSubmitTime" class="font-medium text-slate-700">2026-10-10 16:00:00</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">총 이수 시간</span>
+            <span class="font-bold text-slate-900">총 3시간 (완료)</span>
+          </div>
+        </div>
+
+        <p class="text-sm text-slate-600 leading-relaxed">
+          수고 많으셨습니다. 담당자가 제출된 서명을 검토하여 공식 양식으로 보관합니다.
+        </p>
+
+        <!-- Privacy Cleanup for Shared Mobile Devices -->
+        <div class="pt-3 border-t border-slate-100 space-y-2">
+          <button onclick="handleParticipantLogout()" class="w-full touch-target bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 px-6 rounded-2xl transition shadow-md flex items-center justify-center space-x-2">
+            <i data-lucide="shield-alert" class="w-5 h-5 text-emerald-400"></i>
+            <span>개인정보 정리 및 다음 어르신 로그인</span>
+          </button>
+          <p class="text-xs text-slate-400">
+            * 복지관 공용 스마트폰인 경우 다음 분을 위해 꼭 위 버튼을 눌러주세요.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 2: MANAGER / ADMIN DASHBOARD (담당자 실무자 관리 화면) -->
+    <!-- ========================================================================= -->
+    <div id="adminView" class="hidden space-y-6">
+
+      <!-- Admin Login Overlay / Card (Shown when not authenticated) -->
+      <div id="adminLoginCard" class="max-w-md mx-auto bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 elderly-card mt-6">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-100">
+            <i data-lucide="lock" class="w-8 h-8"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-slate-900 tracking-tight">담당자 인증 로그인</h2>
+          <p class="text-slate-500 text-sm mt-1">참여자 명단 조회, 배정 및 이수확인증 다운로드를 위해 담당자 비밀번호를 입력해주세요.</p>
+        </div>
+
+        <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-slate-700 text-sm font-bold mb-2">담당자 비밀번호</label>
+            <input type="password" id="adminInputPassword" required placeholder="비밀번호 입력 (초기: admin1234)"
+                   class="w-full text-base px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none font-medium transition" />
+          </div>
+
+          <div id="adminLoginError" class="hidden p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium flex items-center space-x-2">
+            <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i>
+            <span>비밀번호가 일치하지 않습니다. 다시 입력해주세요.</span>
+          </div>
+
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+            <span>관리자 대시보드 접속</span>
+            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </button>
+        </form>
+        <p class="text-xs text-center text-slate-400 mt-4">초기 비밀번호: <code class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-mono">admin1234</code></p>
+      </div>
+
+      <!-- Admin Authenticated Main Workspace -->
+      <div id="adminWorkspace" class="hidden space-y-6">
+
+        <!-- Admin Workspace Subheader & Tabs -->
+        <div class="bg-white rounded-2xl p-3 border border-slate-200 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+          <div class="flex items-center space-x-1.5 overflow-x-auto py-1">
+            <button onclick="switchAdminTab('status')" id="adminTabBtn-status" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-bold transition flex items-center space-x-1.5 bg-blue-600 text-white shadow-sm">
+              <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+              <span>이수 현황 및 발급</span>
+            </button>
+            <button onclick="switchAdminTab('assign')" id="adminTabBtn-assign" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-bold transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+              <i data-lucide="calendar-plus" class="w-4 h-4"></i>
+              <span>교육 배정 관리 (3시간)</span>
+            </button>
+            <button onclick="switchAdminTab('participants')" id="adminTabBtn-participants" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-bold transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+              <i data-lucide="users" class="w-4 h-4"></i>
+              <span>참여자 명단 관리</span>
+            </button>
+            <button onclick="switchAdminTab('settings')" id="adminTabBtn-settings" class="admin-tab-btn px-4 py-2 rounded-xl text-sm font-bold transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+              <i data-lucide="settings" class="w-4 h-4"></i>
+              <span>설정 및 백업</span>
+            </button>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button onclick="loadSampleDemoData()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition flex items-center space-x-1">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>가상 실외사업단 샘플 로드</span>
+            </button>
+            <button onclick="handleAdminLogout()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center space-x-1">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+              <span>로그아웃</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 1: 이수 현황 및 발급 (Dashboard & Certificate Generation) -->
+        <div id="adminTabContent-status" class="space-y-6">
+          
+          <!-- Summary Metric Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">총 등록 참여자</span>
+              <p id="statTotalParticipants" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">0명</p>
+              <span class="text-xs text-emerald-600 font-semibold mt-1 inline-block">실외사업단 2개소</span>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">총 교육 배정 건수</span>
+              <p id="statTotalAssignments" class="text-2xl sm:text-3xl font-extrabold text-blue-600 mt-1">0건</p>
+              <span class="text-xs text-slate-500 mt-1 inline-block">각 3시간 기준</span>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">이수 완료 (서명 완료)</span>
+              <p id="statCompletedSubmissions" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">0건</p>
+              <span id="statCompletionRate" class="text-xs text-emerald-700 font-semibold mt-1 inline-block">달성률 0%</span>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">담당자 검토 대기</span>
+              <p id="statPendingReview" class="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">0건</p>
+              <span class="text-xs text-amber-700 font-semibold mt-1 inline-block">확인증 승인 필요</span>
+            </div>
+          </div>
+
+          <!-- Filter & Bulk Actions Bar -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="filterDeptSelect" onchange="renderStatusTable()" class="text-sm px-3 py-2 rounded-xl border border-slate-300 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="ALL">전체 사업단</option>
+                <option value="공원환경개선">공원환경개선</option>
+                <option value="지역사회환경개선">지역사회환경개선</option>
+              </select>
+
+              <select id="filterStatusSelect" onchange="renderStatusTable()" class="text-sm px-3 py-2 rounded-xl border border-slate-300 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="ALL">전체 이수 상태</option>
+                <option value="COMPLETED">제출 완료 (발급 가능)</option>
+                <option value="PARTIAL">일부 과목 완료</option>
+                <option value="PENDING">미제출</option>
+              </select>
+
+              <input type="text" id="searchNameInput" oninput="renderStatusTable()" placeholder="참여자 성함 검색..."
+                     class="text-sm px-3.5 py-2 rounded-xl border border-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            <!-- Bulk ZIP & Action Buttons -->
+            <div class="flex items-center space-x-2">
+              <button onclick="handleBulkZipDownload()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold transition flex items-center space-x-1.5 shadow-sm">
+                <i data-lucide="archive" class="w-4 h-4 text-emerald-400"></i>
+                <span>선택 이수확인증 일괄 다운로드(ZIP)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Status List Table -->
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-slate-700">
+                <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                  <tr>
+                    <th class="p-4 w-10">
+                      <input type="checkbox" id="checkAllRows" onchange="toggleSelectAllRows(this.checked)" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+                    </th>
+                    <th class="p-4">참여자</th>
+                    <th class="p-4">소속 사업단</th>
+                    <th class="p-4">교육 배정일</th>
+                    <th class="p-4">배정 과목 (시간)</th>
+                    <th class="p-4">이수 상태</th>
+                    <th class="p-4">실제 제출시각</th>
+                    <th class="p-4">담당자 검토</th>
+                    <th class="p-4 text-right">이수확인증(PDF)</th>
+                  </tr>
+                </thead>
+                <tbody id="statusTableBody" class="divide-y divide-slate-100 font-medium">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <div id="statusTableEmpty" class="hidden p-12 text-center text-slate-400">
+              <i data-lucide="folder-open" class="w-12 h-12 mx-auto stroke-1 mb-2"></i>
+              <p class="text-base font-semibold">조건에 맞는 이수 기록이 없습니다.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TAB 2: 교육 배정 관리 (Strict 3 Hours Daily Allocation) -->
+        <div id="adminTabContent-assign" class="hidden space-y-6">
+          
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Left 2 Cols: New Daily Assignment Creator -->
+            <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <h3 class="text-lg font-bold text-slate-900">신규 비대면 교육 배정</h3>
+                  <p class="text-xs text-slate-500">PRD 규칙: 하루 배정은 <b>정확히 3시간</b>이어야 저장이 가능합니다 (2시간, 4시간 불가).</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  하루 3시간 원칙
+                </span>
+              </div>
+
+              <!-- Target Scope Selection -->
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-bold text-slate-800 mb-1.5">배정 대상 구분</label>
+                  <div class="flex items-center space-x-3">
+                    <label class="flex items-center space-x-2 text-sm font-semibold text-slate-700 cursor-pointer">
+                      <input type="radio" name="assignTargetType" value="dept" checked onchange="toggleAssignTargetType('dept')" class="text-blue-600 focus:ring-blue-500">
+                      <span>사업단 전체 일괄 배정</span>
+                    </label>
+                    <label class="flex items-center space-x-2 text-sm font-semibold text-slate-700 cursor-pointer">
+                      <input type="radio" name="assignTargetType" value="individual" onchange="toggleAssignTargetType('individual')" class="text-blue-600 focus:ring-blue-500">
+                      <span>특정 참여자 개별 배정</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div id="assignDeptContainer">
+                  <label class="block text-sm font-bold text-slate-800 mb-1.5">대상 사업단 선택</label>
+                  <select id="assignDeptSelect" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+                    <option value="공원환경개선">공원환경개선 사업단</option>
+                    <option value="지역사회환경개선">지역사회환경개선 사업단</option>
+                  </select>
+                </div>
+
+                <div id="assignIndividualContainer" class="hidden">
+                  <label class="block text-sm font-bold text-slate-800 mb-1.5">대상 참여자 선택</label>
+                  <select id="assignPartSelect" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+
+                <!-- Assignment Date -->
+                <div>
+                  <label class="block text-sm font-bold text-slate-800 mb-1.5">교육 배정일 (실제학습일로 자동 기재)</label>
+                  <input type="date" id="assignDateInput" value="2026-04-15" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+                  <p class="text-xs text-slate-400 mt-1">* 늦게 제출해도 이 배정일이 확인증의 '실제학습일' 칸에 공식 기재됩니다.</p>
+                </div>
+
+                <!-- Official 17 Course Selector -->
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <label class="text-sm font-bold text-slate-800">교육과목 선택 (공식 17과목)</label>
+                    <div id="assignTotalHoursBadge" class="text-sm font-extrabold px-3 py-1 rounded-full bg-slate-100 text-slate-700">
+                      선택된 시간: 0시간 / 3시간
+                    </div>
+                  </div>
+
+                  <div id="assignCourseListGrid" class="space-y-2 max-h-80 overflow-y-auto p-3 bg-slate-50 rounded-2xl border border-slate-200 divide-y divide-slate-100">
+                    <!-- 17 courses populated by JS -->
+                  </div>
+                </div>
+
+                <div id="assignHourValidationAlert" class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold flex items-center space-x-2">
+                  <i data-lucide="info" class="w-4 h-4 flex-shrink-0 text-amber-600"></i>
+                  <span id="assignHourValidationMsg">과목을 선택해주세요. 정확히 3시간이 되어야 저장할 수 있습니다.</span>
+                </div>
+
+                <button id="assignSubmitBtn" disabled onclick="handleCreateAssignment()" class="w-full py-3.5 rounded-xl font-bold text-white bg-slate-300 cursor-not-allowed transition shadow-sm flex items-center justify-center space-x-2">
+                  <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                  <span>교육 배정 저장하기 (3시간 완료 시 활성화)</span>
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Right 1 Col: Quick Reference & Guide -->
+            <div class="space-y-4">
+              <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-sm space-y-3">
+                <h4 class="font-bold text-base flex items-center space-x-2">
+                  <i data-lucide="book-open" class="w-5 h-5 text-emerald-400"></i>
+                  <span>하루 3시간 교육 추천 조합</span>
+                </h4>
+                <div class="text-xs space-y-2 text-slate-300">
+                  <div class="p-2.5 bg-white/10 rounded-xl">
+                    <b class="text-white">조합 A (1시간 3개):</b><br>
+                    안전교육1과정(1h) + 안전교육2과정(1h) + 노인일자리 화상예방교육(1h) = 3h
+                  </div>
+                  <div class="p-2.5 bg-white/10 rounded-xl">
+                    <b class="text-white">조합 B (2시간 + 1시간):</b><br>
+                    안전사고예방워크북(2h) + 인권교육(1h) = 3h
+                  </div>
+                  <div class="p-2.5 bg-white/10 rounded-xl">
+                    <b class="text-white">조합 C (3시간 단독):</b><br>
+                    안전사례1(3h) 또는 노인일자리의 이해(3h) = 3h
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-2 text-xs text-slate-600">
+                <h4 class="font-bold text-slate-900 text-sm">교육 배정 관리 규칙</h4>
+                <ul class="list-disc pl-4 space-y-1">
+                  <li>사업단 일괄 배정 후 특정 참여자만 과목을 변경할 수 있습니다.</li>
+                  <li>모든 참여자는 이름과 생년월일로 본인 배정만 열람합니다.</li>
+                  <li>미제출 배정일이 여러 개면 가장 오래된 날부터 우선 표시됩니다.</li>
+                </ul>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Existing Assignments Summary Table -->
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm p-6 space-y-4">
+            <h3 class="text-lg font-bold text-slate-900">등록된 교육 배정 목록</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-slate-700">
+                <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                  <tr>
+                    <th class="p-3">배정일</th>
+                    <th class="p-3">대상 구분</th>
+                    <th class="p-3">사업단 / 참여자</th>
+                    <th class="p-3">배정 과목 (총 3시간)</th>
+                    <th class="p-3">등록 시각</th>
+                    <th class="p-3 text-right">관리</th>
+                  </tr>
+                </thead>
+                <tbody id="assignmentListBody" class="divide-y divide-slate-100 font-medium">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TAB 3: 참여자 명단 관리 (Participants & Excel Upload) -->
+        <div id="adminTabContent-participants" class="hidden space-y-6">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-bold text-slate-900">참여자 명단 관리</h3>
+              <p class="text-xs text-slate-500">실외사업단(공원환경개선, 지역사회환경개선) 참여자를 등록하고 엑셀로 일괄 관리합니다.</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="downloadExcelSample()" class="px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center space-x-1.5">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>엑셀 샘플 양식 다운로드</span>
+              </button>
+              <button onclick="openModal('modalExcelUpload')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                <span>엑셀 일괄 등록 (.xlsx)</span>
+              </button>
+              <button onclick="openModal('modalAddParticipant')" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                <span>참여자 개별 추가</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Participants Table -->
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-slate-700">
+                <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                  <tr>
+                    <th class="p-4">성함</th>
+                    <th class="p-4">생년월일</th>
+                    <th class="p-4">소속 사업단</th>
+                    <th class="p-4">연락처</th>
+                    <th class="p-4">등록일</th>
+                    <th class="p-4 text-right">관리</th>
+                  </tr>
+                </thead>
+                <tbody id="participantTableBody" class="divide-y divide-slate-100 font-medium">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+            <div id="participantTableEmpty" class="hidden p-12 text-center text-slate-400">
+              <i data-lucide="user-x" class="w-12 h-12 mx-auto stroke-1 mb-2"></i>
+              <p class="text-base font-semibold">등록된 참여자가 없습니다.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TAB 4: 설정 및 백업 (Settings, Password, Backup) -->
+        <div id="adminTabContent-settings" class="hidden space-y-6">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Org & Department Settings -->
+            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+              <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+                <i data-lucide="building" class="w-5 h-5 text-blue-600"></i>
+                <span>기관 및 실외사업단 설정</span>
+              </h3>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">기관명 (PDF 확인증 헤더에 자동 인쇄)</label>
+                <input type="text" id="settingOrgNameInput" value="행복노인종합복지관" class="w-full text-sm px-3.5 py-2 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">실외사업단 목록 (쉼표로 구분)</label>
+                <input type="text" id="settingDeptsInput" value="공원환경개선, 지역사회환경개선" class="w-full text-sm px-3.5 py-2 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">담당자 관리자 비밀번호 변경</label>
+                <input type="password" id="settingAdminPasswordInput" placeholder="새 비밀번호 입력" class="w-full text-sm px-3.5 py-2 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+              </div>
+
+              <button onclick="saveAdminSettings()" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition shadow-sm">
+                설정 저장
+              </button>
+            </div>
+
+            <!-- PDF Template Status & Custom Template Upload -->
+            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+              <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+                <i data-lucide="file-text" class="w-5 h-5 text-emerald-600"></i>
+                <span>공식 이수확인증 서식 (PDF) 관리</span>
+              </h3>
+              <p class="text-xs text-slate-500">
+                현재 시스템에 공식 원본 서식 <b>(양식)+2026년+이수확인증_수정.pdf</b>가 내장되어 있어 별도 서버 없이 오프라인에서도 PDF가 정상 생성됩니다.
+              </p>
+              
+              <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                  <span class="font-bold">2026년 공식 원본 서식 탑재 완료 (A4)</span>
+                </div>
+                <span class="text-emerald-700 font-mono">17개 과목 매핑</span>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">서식 PDF 교체 (선택 사항)</label>
+                <input type="file" id="customPdfFileInput" accept="application/pdf" onchange="handleCustomPdfUpload(event)" class="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+              </div>
+            </div>
+
+            <!-- Data Backup & Restore -->
+            <div class="md:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+              <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+                <i data-lucide="database" class="w-5 h-5 text-slate-700"></i>
+                <span>데이터 백업 및 복원 (JSON)</span>
+              </h3>
+              <p class="text-xs text-slate-500">
+                복지관 PC 및 노트북 간 데이터 이동이나 안전한 보관을 위해 등록된 명단, 배정, 서명 및 이수 내역을 백업할 수 있습니다.
+              </p>
+
+              <div class="flex flex-wrap items-center gap-3">
+                <button onclick="exportDataBackup()" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                  <i data-lucide="download" class="w-4 h-4 text-emerald-400"></i>
+                  <span>전체 데이터 백업 파일 다운로드 (.json)</span>
+                </button>
+
+                <label class="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer">
+                  <i data-lucide="upload" class="w-4 h-4"></i>
+                  <span>백업 파일 복원 불러오기</span>
+                  <input type="file" accept=".json" onchange="importDataBackup(event)" class="hidden">
+                </label>
+
+                <button onclick="handleResetAllData()" class="px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-50 text-xs font-bold transition flex items-center space-x-1.5 ml-auto">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  <span>전체 데이터 초기화</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODALS -->
+  <!-- ========================================================================= -->
+
+  <!-- Modal: Participant Manual Add -->
+  <div id="modalAddParticipant" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-lg font-bold text-slate-900">참여자 개별 추가</h3>
+        <button onclick="closeModal('modalAddParticipant')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleAddParticipantSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">성함 *</label>
+          <input type="text" id="addPartName" required placeholder="예: 김순자" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">생년월일 (6자리 또는 8자리) *</label>
+          <input type="text" id="addPartBirth" required placeholder="예: 520315 또는 19520315" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">소속 사업단 *</label>
+          <select id="addPartDept" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+            <option value="공원환경개선">공원환경개선 사업단</option>
+            <option value="지역사회환경개선">지역사회환경개선 사업단</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">연락처 (선택)</label>
+          <input type="text" id="addPartPhone" placeholder="예: 010-1234-5678" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="pt-2 flex justify-end space-x-2">
+          <button type="button" onclick="closeModal('modalAddParticipant')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-sm font-semibold">취소</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-sm">추가하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Excel Batch Upload -->
+  <div id="modalExcelUpload" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-lg font-bold text-slate-900">엑셀 참여자 명단 일괄 등록</h3>
+        <button onclick="closeModal('modalExcelUpload')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500">
+        엑셀 파일(.xlsx, .xls)을 업로드하면 여러 명의 참여자를 한 번에 등록할 수 있습니다. 
+        동일한 [성함 + 생년월일] 중복 행은 자동으로 검출됩니다.
+      </p>
+
+      <div class="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center cursor-pointer transition bg-slate-50"
+           onclick="document.getElementById('excelFileInput').click()">
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" onchange="handleExcelFileSelected(event)" class="hidden">
+        <i data-lucide="file-up" class="w-10 h-10 text-emerald-600 mx-auto mb-2"></i>
+        <p class="text-sm font-bold text-slate-800">엑셀 파일을 선택하거나 여기로 드래그하세요</p>
+        <p class="text-xs text-slate-400 mt-1">.xlsx, .xls 지원</p>
+      </div>
+
+      <div id="excelPreviewContainer" class="hidden space-y-3">
+        <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+          <span>분석 결과: 총 <span id="excelParsedCount" class="text-emerald-700">0</span>명 감지</span>
+          <span id="excelDuplicateCount" class="text-amber-600">중복 0건</span>
+        </div>
+        <div id="excelPreviewList" class="max-h-40 overflow-y-auto text-xs divide-y divide-slate-100 border border-slate-200 rounded-xl p-2 bg-slate-50"></div>
+      </div>
+
+      <div class="pt-2 flex justify-end space-x-2">
+        <button type="button" onclick="closeModal('modalExcelUpload')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-sm font-semibold">닫기</button>
+        <button id="excelConfirmBtn" disabled onclick="handleConfirmExcelUpload()" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm disabled:opacity-50">등록 실행</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Submission Detail & Manager Review / Edit -->
+  <div id="modalSubmissionDetail" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 id="modalDetailTitle" class="text-lg font-bold text-slate-900">이수 내역 및 서명 상세</h3>
+          <p id="modalDetailSubtitle" class="text-xs text-slate-500">배정일 및 실제 서명 이미지 검토</p>
+        </div>
+        <button onclick="closeModal('modalSubmissionDetail')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="modalDetailContent" class="space-y-4 text-sm">
+        <!-- Populated by JS -->
+      </div>
+
+      <div class="border-t border-slate-100 pt-3 flex items-center justify-between">
+        <div id="modalReviewActionContainer">
+          <!-- Review toggle button -->
+        </div>
+        <div class="flex items-center space-x-2">
+          <button id="modalSinglePdfBtn" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition flex items-center space-x-1.5 shadow-sm">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>이수확인증 PDF 다운로드</span>
+          </button>
+          <button onclick="closeModal('modalSubmissionDetail')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-sm font-semibold">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Modify Course Assignment (With Audit Trail & Reason) -->
+  <div id="modalEditAssignment" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-lg font-bold text-slate-900">참여자 교육 배정 과목 수정</h3>
+        <button onclick="closeModal('modalEditAssignment')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500">
+        PRD 요구사항: 수정 시 원래 기록과 사유가 보존되며 새 서명을 무단 복제하지 않습니다. 
+        총 시간은 반드시 <b>3시간</b>이어야 합니다.
+      </p>
+
+      <div id="editCourseListContainer" class="space-y-2 max-h-60 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
+        <!-- Courses checkboxes -->
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">변경 사유 (필수 기록) *</label>
+        <input type="text" id="editAssignmentReason" required placeholder="예: 사업단 일정 변경에 따른 대체 과목 배정" class="w-full text-sm px-3.5 py-2 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <div class="pt-2 flex justify-end space-x-2">
+        <button type="button" onclick="closeModal('modalEditAssignment')" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-sm font-semibold">취소</button>
+        <button id="saveEditAssignmentBtn" onclick="handleSaveEditedAssignment()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-sm">변경 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 max-w-md bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center space-x-3 transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none">
+    <i id="toastIcon" data-lucide="info" class="w-5 h-5 text-emerald-400 flex-shrink-0"></i>
+    <span id="toastMessage" class="text-sm font-medium">알림 내용</span>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT LOGIC (PRD 100% SPEC IMPLEMENTATION) -->
+  <!-- ========================================================================= -->
+  <script>
+    /* ==========================================================================
+       1. CONSTANTS & 17 OFFICIAL COURSES (PRD Section 6)
+       ========================================================================== */
+    const OFFICIAL_COURSES = [
+      { id: 1, group: '단독', name: '안전사고예방워크북', hours: 2, rowIdx: 1 },
+      { id: 2, group: '안전교육 1~4과정', name: '안전교육1과정', hours: 1, rowIdx: 2 },
+      { id: 3, group: '안전교육 1~4과정', name: '안전교육2과정', hours: 1, rowIdx: 3 },
+      { id: 4, group: '안전교육 1~4과정', name: '안전교육3과정', hours: 1, rowIdx: 4 },
+      { id: 5, group: '안전교육 1~4과정', name: '안전교육4과정', hours: 1, rowIdx: 5 },
+      { id: 6, group: '노인일자리 화상예방교육', name: '노인일자리 화상예방교육', hours: 1, rowIdx: 6 },
+      { id: 7, group: '노인일자리 화상예방교육', name: '노인 화상예방송', hours: 1, rowIdx: 7 },
+      { id: 8, group: '노인일자리 화상예방교육', name: '노인일자리참여자 활동 중 화상예방안전교육', hours: 1, rowIdx: 8 },
+      { id: 9, group: '사례로 배우는 안전사고 예방교육', name: '안전사례1', hours: 3, rowIdx: 9 },
+      { id: 10, group: '사례로 배우는 안전사고 예방교육', name: '안전사례2', hours: 3, rowIdx: 10 },
+      { id: 11, group: '안전워크북 1~3과정', name: '안전워크북 1', hours: 3, rowIdx: 11 },
+      { id: 12, group: '안전워크북 1~3과정', name: '안전워크북 2', hours: 2, rowIdx: 12 },
+      { id: 13, group: '안전워크북 1~3과정', name: '안전워크북 3', hours: 2, rowIdx: 13 },
+      { id: 14, group: '단독', name: '인권교육', hours: 1, rowIdx: 14 },
+      { id: 15, group: '단독', name: '성희롱예방교육', hours: 1, rowIdx: 15 },
+      { id: 16, group: '단독', name: '노인일자리의 이해', hours: 3, rowIdx: 16 },
+      { id: 17, group: '단독', name: '노인일자리 적응하기', hours: 1, rowIdx: 17 }
+    ];
+
+    // Storage Key
+    const STORAGE_KEY = 'SENIOR_JOB_TRAINING_APP_DATA_V1';
+
+    // Global App State
+    let AppState = {
+      settings: {
+        orgName: '행복노인종합복지관',
+        depts: ['공원환경개선', '지역사회환경개선'],
+        adminPassword: 'admin1234'
+      },
+      participants: [], // { id, name, birthDate, dept, phone, createdAt }
+      assignments: [],  // { id, targetType, targetDept, participantId, assignDate, courseIds, totalHours, createdAt }
+      submissions: [],  // { id, participantId, assignmentId, assignDate, completedCourseIds, signatures: { courseId: base64Png }, submittedAt, reviewed: false, reviewedAt: null }
+      auditLogs: [],    // { id, type, targetId, before, after, reason, manager, timestamp }
+      customPdfBase64: null
+    };
+
+    // Current Session State
+    let currentParticipant = null;
+    let currentAssignment = null;
+    let isAdminLoggedIn = false;
+    let activeAdminTab = 'status';
+    let currentEditingAssignmentId = null;
+    let excelParsedCandidates = [];
+
+    // Drawing Canvas Registry for touch/mouse signatures
+    const activeSignaturePads = {};
+
+    /* ==========================================================================
+       2. INITIALIZATION & DATA PERSISTENCE
+       ========================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStateFromStorage();
+      initLucide();
+      renderAssignCourseGrid();
+      updateHeaderOrg();
+
+      // Check URL parameters if needed (e.g., direct mode)
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('mode') === 'admin') {
+        switchMode('admin');
+      } else {
+        switchMode('participant');
+      }
+    });
+
+    function initLucide() {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }
+
+    function saveStateToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(AppState));
+      } catch (err) {
+        console.error('Storage save error:', err);
+      }
+    }
+
+    function loadStateFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          AppState = Object.assign(AppState, parsed);
+        } else {
+          // If no state exists, load initial demo data for smooth experience
+          loadSampleDemoData(false);
+        }
+      } catch (err) {
+        console.error('Storage load error:', err);
+      }
+    }
+
+    function updateHeaderOrg() {
+      const el = document.getElementById('headerOrgName');
+      if (el) el.innerText = AppState.settings.orgName;
+      const input = document.getElementById('settingOrgNameInput');
+      if (input) input.value = AppState.settings.orgName;
+      const deptInput = document.getElementById('settingDeptsInput');
+      if (deptInput) deptInput.value = AppState.settings.depts.join(', ');
+    }
+
+    /* ==========================================================================
+       3. NAVIGATION & MODE SWITCHING
+       ========================================================================== */
+    function switchMode(mode) {
+      const partView = document.getElementById('participantView');
+      const adminView = document.getElementById('adminView');
+      const btnPart = document.getElementById('modeBtnParticipant');
+      const btnAdmin = document.getElementById('modeBtnAdmin');
+
+      if (mode === 'participant') {
+        partView.classList.remove('hidden');
+        adminView.classList.add('hidden');
+        btnPart.className = "flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm";
+        btnAdmin.className = "flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-slate-600 hover:text-slate-900";
+      } else {
+        partView.classList.add('hidden');
+        adminView.classList.remove('hidden');
+        btnAdmin.className = "flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm";
+        btnPart.className = "flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-slate-600 hover:text-slate-900";
+
+        if (!isAdminLoggedIn) {
+          document.getElementById('adminLoginCard').classList.remove('hidden');
+          document.getElementById('adminWorkspace').classList.add('hidden');
+        } else {
+          document.getElementById('adminLoginCard').classList.add('hidden');
+          document.getElementById('adminWorkspace').classList.remove('hidden');
+          renderAdminViews();
+        }
+      }
+      initLucide();
+    }
+
+    function switchAdminTab(tab) {
+      activeAdminTab = tab;
+      const tabs = ['status', 'assign', 'participants', 'settings'];
+      tabs.forEach(t => {
+        const content = document.getElementById(`adminTabContent-${t}`);
+        const btn = document.getElementById(`adminTabBtn-${t}`);
+        if (t === tab) {
+          if (content) content.classList.remove('hidden');
+          if (btn) btn.className = "admin-tab-btn px-4 py-2 rounded-xl text-sm font-bold transition flex items-center space-x-1.5 bg-blue-600 text-white shadow-sm";
+        } else {
+          if (content) content.classList.add('hidden');
+          if (btn) btn.className = "admin-tab-btn px-4 py-2 rounded-xl text-sm font-bold transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100";
+        }
+      });
+      renderAdminViews();
+      initLucide();
+    }
+
+    /* ==========================================================================
+       4. PARTICIPANT MODE (어르신 전용 기능)
+       ========================================================================== */
+    function normalizeBirthDate(input) {
+      if (!input) return '';
+      const clean = input.replace(/[^0-9]/g, '');
+      if (clean.length === 6) {
+        // e.g. 520315 -> 19520315 or 20520315 (heuristic: > 30 is 19xx)
+        const yy = parseInt(clean.substring(0, 2), 10);
+        const prefix = yy > 30 ? '19' : '20';
+        return prefix + clean;
+      }
+      return clean;
+    }
+
+    function formatBirthDisplay(birth) {
+      if (!birth) return '';
+      const clean = birth.replace(/[^0-9]/g, '');
+      if (clean.length === 8) {
+        return `${clean.substring(0, 4)}.${clean.substring(4, 6)}.${clean.substring(6, 8)}`;
+      }
+      return birth;
+    }
+
+    function handleParticipantLogin(event) {
+      event.preventDefault();
+      const name = document.getElementById('partInputName').value.trim();
+      const birth = normalizeBirthDate(document.getElementById('partInputBirth').value.trim());
+      const errBox = document.getElementById('partLoginError');
+
+      if (!name || !birth) {
+        errBox.classList.remove('hidden');
+        document.getElementById('partLoginErrorMsg').innerText = '성함과 생년월일을 모두 입력해주세요.';
+        return;
+      }
+
+      // Exact match check against registered participants
+      const found = AppState.participants.find(p => p.name === name && normalizeBirthDate(p.birthDate) === birth);
+      if (!found) {
+        errBox.classList.remove('hidden');
+        document.getElementById('partLoginErrorMsg').innerText = '등록된 참여자 정보를 찾을 수 없습니다. 이름과 생년월일을 다시 확인해주세요. (문의: 담당자)';
+        return;
+      }
+
+      errBox.classList.add('hidden');
+      currentParticipant = found;
+
+      // Find assignments for this participant (either individual or department-wide)
+      loadParticipantAssignments();
+    }
+
+    function loadParticipantAssignments() {
+      if (!currentParticipant) return;
+
+      const pId = currentParticipant.id;
+      const dept = currentParticipant.dept;
+
+      // Find all assignments that apply to this participant
+      const relevant = AppState.assignments.filter(a => {
+        if (a.targetType === 'individual' && a.participantId === pId) return true;
+        if (a.targetType === 'dept' && a.targetDept === dept) {
+          // Check if participant has an individual override for this date
+          const hasOverride = AppState.assignments.some(sub => sub.targetType === 'individual' && sub.participantId === pId && sub.assignDate === a.assignDate);
+          return !hasOverride;
+        }
+        return false;
+      });
+
+      if (relevant.length === 0) {
+        showToast('현재 배정된 비대면 교육이 없습니다. 담당자에게 문의해주세요.', 'info');
+        return;
+      }
+
+      // PRD Section 7 Rule: 여러 미제출 교육일이 있으면 가장 오래된 배정일부터 표시
+      // Sort assignments by assignDate ascending (oldest first)
+      relevant.sort((a, b) => new Date(a.assignDate) - new Date(b.assignDate));
+
+      // Find the oldest assignment that is not fully completed
+      let chosenAssignment = null;
+      for (const assign of relevant) {
+        const sub = AppState.submissions.find(s => s.participantId === pId && s.assignDate === assign.assignDate);
+        if (!sub || (sub.completedCourseIds || []).length < (assign.courseIds || []).length) {
+          chosenAssignment = assign;
+          break;
+        }
+      }
+
+      // If all are completed, show the latest completed one
+      if (!chosenAssignment) {
+        chosenAssignment = relevant[relevant.length - 1];
+      }
+
+      currentAssignment = chosenAssignment;
+      renderParticipantCourseCard();
+    }
+
+    function renderParticipantCourseCard() {
+      document.getElementById('participantLoginCard').classList.add('hidden');
+      document.getElementById('participantCourseCard').classList.remove('hidden');
+      document.getElementById('participantSuccessCard').classList.add('hidden');
+
+      // Update Header info
+      document.getElementById('partGreetingAvatar').innerText = currentParticipant.name.charAt(0);
+      document.getElementById('partGreetingName').innerText = `${currentParticipant.name} 어르신`;
+      document.getElementById('partGreetingBirth').innerText = formatBirthDisplay(currentParticipant.birthDate);
+      document.getElementById('partGreetingDept').innerText = `${currentParticipant.dept} 사업단`;
+
+      const assignDateFormatted = currentAssignment.assignDate.replace(/-/g, '. ');
+      document.getElementById('partAssignDateBadge').innerText = `배정일: ${assignDateFormatted}`;
+
+      // Check existing submission (support resume / 이어하기)
+      const existingSub = AppState.submissions.find(s => s.participantId === currentParticipant.id && s.assignDate === currentAssignment.assignDate);
+      const completedCourseIds = existingSub ? (existingSub.completedCourseIds || []) : [];
+      const signatures = existingSub ? (existingSub.signatures || {}) : {};
+
+      const container = document.getElementById('partCourseListContainer');
+      container.innerHTML = '';
+
+      const assignedCourseList = OFFICIAL_COURSES.filter(c => currentAssignment.courseIds.includes(c.id));
+
+      assignedCourseList.forEach((course, idx) => {
+        const isCompleted = completedCourseIds.includes(course.id);
+        const existingSig = signatures[course.id];
+
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-3xl p-6 border-2 " + (isCompleted ? "border-emerald-500 bg-emerald-50/20" : "border-slate-200") + " elderly-card space-y-4";
+        card.id = `courseCard-${course.id}`;
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-3">
+              <span class="w-8 h-8 rounded-full ${isCompleted ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'} font-bold text-sm flex items-center justify-center">
+                ${idx + 1}
+              </span>
+              <div>
+                <h3 class="text-xl font-extrabold text-slate-900">${course.name}</h3>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">${course.group}</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-lg font-black text-emerald-700">${course.hours}시간</span>
+              <p class="text-xs text-slate-400">실제학습일: ${assignDateFormatted}</p>
+            </div>
+          </div>
+
+          <!-- Checkbox: 이수 확인 -->
+          <label class="flex items-center space-x-3 p-3.5 rounded-2xl ${isCompleted ? 'bg-emerald-100/70 text-emerald-950 font-bold' : 'bg-slate-50 text-slate-800'} cursor-pointer border border-slate-200 transition">
+            <input type="checkbox" id="checkCourse-${course.id}" ${isCompleted ? 'checked' : ''} onchange="handleCourseCheckChanged(${course.id})"
+                   class="w-6 h-6 rounded-lg text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+            <span class="text-base font-bold">위 과목(${course.name}) 교육을 성실히 이수하였음을 확인합니다.</span>
+          </label>
+
+          <!-- Signature Pad Section -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-bold text-slate-700 flex items-center space-x-1.5">
+                <i data-lucide="pen-tool" class="w-4 h-4 text-emerald-600"></i>
+                <span>참여자 정자(이름) 서명:</span>
+              </span>
+              <button type="button" onclick="clearSignatureCanvas(${course.id})" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition flex items-center space-x-1">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span>다시 쓰기</span>
+              </button>
+            </div>
+
+            <div class="border-2 border-dashed ${isCompleted ? 'border-emerald-400 bg-white' : 'border-slate-300 bg-slate-50'} rounded-2xl p-2 relative overflow-hidden">
+              <canvas id="canvas-${course.id}" class="signature-canvas w-full h-32 rounded-xl" width="500" height="150"></canvas>
+              ${isCompleted ? '<span class="absolute top-3 right-3 text-xs bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full shadow-sm">서명 완료</span>' : ''}
+            </div>
+            <p class="text-xs text-slate-400">
+              * 손가락이나 펜으로 네모 칸 안에 어르신 성함(<b>${currentParticipant.name}</b>)을 정자로 바르게 적어주세요.
+            </p>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      initLucide();
+
+      // Setup drawing canvases
+      assignedCourseList.forEach(course => {
+        setupSignatureCanvas(course.id, signatures[course.id]);
+      });
+
+      updateParticipantProgressBar();
+    }
+
+    function setupSignatureCanvas(courseId, initialDataUrl) {
+      const canvas = document.getElementById(`canvas-${courseId}`);
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#0f172a'; // Carbon dark ink
+
+      let isDrawing = false;
+      let hasDrawn = false;
+
+      // If initial signature image exists, draw it onto canvas
+      if (initialDataUrl) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          hasDrawn = true;
+        };
+        img.src = initialDataUrl;
+      }
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+          x: (clientX - rect.left) * (canvas.width / rect.width),
+          y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+      }
+
+      function startDraw(e) {
+        e.preventDefault();
+        isDrawing = true;
+        hasDrawn = true;
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+      }
+
+      function stopDraw(e) {
+        if (isDrawing) {
+          isDrawing = false;
+          updateParticipantProgressBar();
+        }
+      }
+
+      canvas.addEventListener('mousedown', startDraw);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDraw);
+      canvas.addEventListener('mouseleave', stopDraw);
+
+      canvas.addEventListener('touchstart', startDraw, { passive: false });
+      canvas.addEventListener('touchmove', draw, { passive: false });
+      canvas.addEventListener('touchend', stopDraw, { passive: false });
+
+      activeSignaturePads[courseId] = {
+        canvas,
+        ctx,
+        hasDrawn: () => hasDrawn,
+        setHasDrawn: (val) => { hasDrawn = val; },
+        getDataUrl: () => canvas.toDataURL('image/png')
+      };
+    }
+
+    function clearSignatureCanvas(courseId) {
+      const pad = activeSignaturePads[courseId];
+      if (pad) {
+        pad.ctx.clearRect(0, 0, pad.canvas.width, pad.canvas.height);
+        pad.setHasDrawn(false);
+        updateParticipantProgressBar();
+      }
+    }
+
+    function handleCourseCheckChanged(courseId) {
+      updateParticipantProgressBar();
+    }
+
+    function updateParticipantProgressBar() {
+      if (!currentAssignment) return;
+      const total = currentAssignment.courseIds.length;
+      let completedCount = 0;
+
+      currentAssignment.courseIds.forEach(cId => {
+        const chk = document.getElementById(`checkCourse-${cId}`);
+        const pad = activeSignaturePads[cId];
+        const isChecked = chk && chk.checked;
+        const isSigned = pad && pad.hasDrawn();
+        if (isChecked && isSigned) completedCount++;
+      });
+
+      const pct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+      document.getElementById('partProgressText').innerText = `${completedCount} / ${total} 과목 완료 (${pct}%)`;
+      document.getElementById('partProgressBar').style.width = `${pct}%`;
+
+      const alertBox = document.getElementById('partSubmitAlert');
+      if (completedCount === total) {
+        alertBox.classList.add('hidden');
+      }
+    }
+
+    function handleParticipantFinalSubmit() {
+      if (!currentParticipant || !currentAssignment) return;
+
+      const total = currentAssignment.courseIds.length;
+      const completedCourseIds = [];
+      const signatures = {};
+
+      for (const cId of currentAssignment.courseIds) {
+        const chk = document.getElementById(`checkCourse-${cId}`);
+        const pad = activeSignaturePads[cId];
+        const isChecked = chk && chk.checked;
+        const isSigned = pad && pad.hasDrawn();
+
+        if (!isChecked || !isSigned) {
+          const alertBox = document.getElementById('partSubmitAlert');
+          alertBox.classList.remove('hidden');
+          document.getElementById('partSubmitAlertMsg').innerText = `과목 [${OFFICIAL_COURSES.find(c => c.id === cId).name}]의 이수 확인 체크와 정자 서명이 누락되었습니다. 모두 완료해주세요.`;
+          return;
+        }
+
+        completedCourseIds.push(cId);
+        signatures[cId] = pad.getDataUrl();
+      }
+
+      // Hide alert
+      document.getElementById('partSubmitAlert').classList.add('hidden');
+
+      // Now create or update submission
+      const now = new Date();
+      const submitTimeKST = now.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+
+      let existingSub = AppState.submissions.find(s => s.participantId === currentParticipant.id && s.assignDate === currentAssignment.assignDate);
+      if (existingSub) {
+        existingSub.completedCourseIds = completedCourseIds;
+        existingSub.signatures = signatures;
+        existingSub.submittedAt = submitTimeKST;
+      } else {
+        existingSub = {
+          id: 'sub_' + Date.now(),
+          participantId: currentParticipant.id,
+          assignmentId: currentAssignment.id,
+          assignDate: currentAssignment.assignDate,
+          completedCourseIds,
+          signatures,
+          submittedAt: submitTimeKST,
+          reviewed: false,
+          reviewedAt: null
+        };
+        AppState.submissions.push(existingSub);
+      }
+
+      saveStateToStorage();
+
+      // Show Success Card
+      document.getElementById('participantCourseCard').classList.add('hidden');
+      document.getElementById('participantSuccessCard').classList.remove('hidden');
+
+      document.getElementById('successPartName').innerText = currentParticipant.name;
+      document.getElementById('successPartDept').innerText = currentParticipant.dept;
+      document.getElementById('successAssignDate').innerText = currentAssignment.assignDate.replace(/-/g, '. ');
+      document.getElementById('successSubmitTime').innerText = submitTimeKST;
+
+      showToast('이수확인증 제출이 정상 완료되었습니다!', 'success');
+    }
+
+    function handleParticipantLogout() {
+      currentParticipant = null;
+      currentAssignment = null;
+      document.getElementById('participantCourseCard').classList.add('hidden');
+      document.getElementById('participantSuccessCard').classList.add('hidden');
+      document.getElementById('participantLoginCard').classList.remove('hidden');
+      document.getElementById('partInputName').value = '';
+      document.getElementById('partInputBirth').value = '';
+      document.getElementById('partLoginError').classList.add('hidden');
+    }
+
+    /* ==========================================================================
+       5. ADMIN MANAGER DASHBOARD LOGIC
+       ========================================================================== */
+    function handleAdminLogin(event) {
+      event.preventDefault();
+      const pwd = document.getElementById('adminInputPassword').value;
+      const errBox = document.getElementById('adminLoginError');
+
+      if (pwd === AppState.settings.adminPassword) {
+        isAdminLoggedIn = true;
+        errBox.classList.add('hidden');
+        document.getElementById('adminLoginCard').classList.add('hidden');
+        document.getElementById('adminWorkspace').classList.remove('hidden');
+        renderAdminViews();
+      } else {
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    function handleAdminLogout() {
+      isAdminLoggedIn = false;
+      document.getElementById('adminWorkspace').classList.add('hidden');
+      document.getElementById('adminLoginCard').classList.remove('hidden');
+      document.getElementById('adminInputPassword').value = '';
+    }
+
+    function renderAdminViews() {
+      if (!isAdminLoggedIn) return;
+      updateAdminDashboardStats();
+      renderStatusTable();
+      renderAssignmentList();
+      renderParticipantTable();
+    }
+
+    function updateAdminDashboardStats() {
+      document.getElementById('statTotalParticipants').innerText = `${AppState.participants.length}명`;
+      document.getElementById('statTotalAssignments').innerText = `${AppState.assignments.length}건`;
+
+      const completedCount = AppState.submissions.filter(s => (s.completedCourseIds || []).length === 3).length;
+      document.getElementById('statCompletedSubmissions').innerText = `${completedCount}건`;
+
+      const rate = AppState.assignments.length > 0 ? Math.round((completedCount / AppState.assignments.length) * 100) : 0;
+      document.getElementById('statCompletionRate').innerText = `완료율 ${rate}%`;
+
+      const pendingReview = AppState.submissions.filter(s => s.completedCourseIds && s.completedCourseIds.length === 3 && !s.reviewed).length;
+      document.getElementById('statPendingReview').innerText = `${pendingReview}건`;
+    }
+
+    /* --- Status & Certificate Table --- */
+    function renderStatusTable() {
+      const tbody = document.getElementById('statusTableBody');
+      const emptyBox = document.getElementById('statusTableEmpty');
+      tbody.innerHTML = '';
+
+      const deptFilter = document.getElementById('filterDeptSelect').value;
+      const statusFilter = document.getElementById('filterStatusSelect').value;
+      const query = document.getElementById('searchNameInput').value.trim().toLowerCase();
+
+      // Build rows for each participant's assignment
+      const rows = [];
+
+      AppState.assignments.forEach(assign => {
+        let targets = [];
+        if (assign.targetType === 'individual') {
+          const p = AppState.participants.find(part => part.id === assign.participantId);
+          if (p) targets.push(p);
+        } else {
+          // Dept target
+          targets = AppState.participants.filter(part => part.dept === assign.targetDept);
+        }
+
+        targets.forEach(part => {
+          // Skip if individual override exists
+          if (assign.targetType === 'dept') {
+            const hasOverride = AppState.assignments.some(sub => sub.targetType === 'individual' && sub.participantId === part.id && sub.assignDate === assign.assignDate);
+            if (hasOverride) return;
+          }
+
+          // Filter by dept
+          if (deptFilter !== 'ALL' && part.dept !== deptFilter) return;
+          // Filter by name query
+          if (query && !part.name.toLowerCase().includes(query)) return;
+
+          // Find submission
+          const sub = AppState.submissions.find(s => s.participantId === part.id && s.assignDate === assign.assignDate);
+          const completedCount = sub ? (sub.completedCourseIds || []).length : 0;
+          const isComplete = completedCount === assign.courseIds.length;
+          const isPartial = completedCount > 0 && !isComplete;
+
+          let statusType = 'PENDING';
+          if (isComplete) statusType = 'COMPLETED';
+          else if (isPartial) statusType = 'PARTIAL';
+
+          if (statusFilter !== 'ALL' && statusType !== statusFilter) return;
+
+          rows.push({
+            part,
+            assign,
+            sub,
+            statusType,
+            completedCount,
+            isComplete
+          });
+        });
+      });
+
+      if (rows.length === 0) {
+        emptyBox.classList.remove('hidden');
+        return;
+      }
+      emptyBox.classList.add('hidden');
+
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/80 transition";
+
+        let statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500">미제출</span>`;
+        if (r.statusType === 'COMPLETED') {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-max">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+            <span>완료 (3시간)</span>
+          </span>`;
+        } else if (r.statusType === 'PARTIAL') {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 flex items-center space-x-1 w-max">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+            <span>일부 (${r.completedCount}과목)</span>
+          </span>`;
+        }
+
+        const reviewedBadge = r.sub && r.sub.reviewed 
+          ? `<span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">검토완료</span>`
+          : (r.isComplete ? `<button onclick="toggleManagerReview('${r.sub.id}')" class="text-xs font-semibold px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200">검토확인</button>` : `<span class="text-xs text-slate-400">-</span>`);
+
+        const pdfDownloadBtn = r.isComplete
+          ? `<button onclick="handleDownloadSinglePdf('${r.part.id}', '${r.assign.assignDate}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center space-x-1 shadow-sm ml-auto">
+               <i data-lucide="download" class="w-3.5 h-3.5"></i>
+               <span>PDF 발급</span>
+             </button>`
+          : `<span class="text-xs text-slate-400">제출 후 가능</span>`;
+
+        const courseSummary = r.assign.courseIds.map(cId => {
+          const c = OFFICIAL_COURSES.find(item => item.id === cId);
+          return c ? `${c.name}(${c.hours}h)` : '';
+        }).join(', ');
+
+        tr.innerHTML = `
+          <td class="p-4">
+            <input type="checkbox" class="row-checkbox rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" 
+                   data-part-id="${r.part.id}" data-date="${r.assign.assignDate}" ${!r.isComplete ? 'disabled' : ''}>
+          </td>
+          <td class="p-4">
+            <div class="font-bold text-slate-900 cursor-pointer hover:text-blue-600" onclick="openSubmissionDetailModal('${r.part.id}', '${r.assign.assignDate}')">
+              ${r.part.name}
+            </div>
+            <div class="text-xs text-slate-400">${formatBirthDisplay(r.part.birthDate)}</div>
+          </td>
+          <td class="p-4">
+            <span class="px-2 py-0.5 rounded text-xs font-bold ${r.part.dept === '공원환경개선' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}">
+              ${r.part.dept}
+            </span>
+          </td>
+          <td class="p-4 font-mono text-xs text-slate-700">${r.assign.assignDate}</td>
+          <td class="p-4 text-xs text-slate-600 max-w-xs truncate" title="${courseSummary}">
+            ${courseSummary}
+          </td>
+          <td class="p-4">${statusBadge}</td>
+          <td class="p-4 text-xs text-slate-500 font-mono">${r.sub ? (r.sub.submittedAt || '-') : '-'}</td>
+          <td class="p-4">${reviewedBadge}</td>
+          <td class="p-4 text-right">${pdfDownloadBtn}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      initLucide();
+    }
+
+    function toggleSelectAllRows(checked) {
+      document.querySelectorAll('.row-checkbox:not(:disabled)').forEach(cb => {
+        cb.checked = checked;
+      });
+    }
+
+    function toggleManagerReview(submissionId) {
+      const sub = AppState.submissions.find(s => s.id === submissionId);
+      if (sub) {
+        sub.reviewed = !sub.reviewed;
+        sub.reviewedAt = sub.reviewed ? new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : null;
+        saveStateToStorage();
+        renderAdminViews();
+        showToast(sub.reviewed ? '담당자 검토가 완료되었습니다.' : '검토가 취소되었습니다.', 'info');
+      }
+    }
+
+    /* --- Course Assignment Manager (Strict 3 Hours Daily Rule) --- */
+    function renderAssignCourseGrid() {
+      const container = document.getElementById('assignCourseListGrid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      OFFICIAL_COURSES.forEach(c => {
+        const div = document.createElement('label');
+        div.className = "flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-800 transition";
+        div.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <input type="checkbox" value="${c.id}" onchange="handleAssignCourseCheckChange()" class="assign-course-checkbox rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer">
+            <span>[${c.group}] <b>${c.name}</b></span>
+          </div>
+          <span class="font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">${c.hours}시간</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function handleAssignCourseCheckChange() {
+      const checkedBoxes = Array.from(document.querySelectorAll('.assign-course-checkbox:checked'));
+      let total = 0;
+      checkedBoxes.forEach(cb => {
+        const id = parseInt(cb.value, 10);
+        const course = OFFICIAL_COURSES.find(c => c.id === id);
+        if (course) total += course.hours;
+      });
+
+      const badge = document.getElementById('assignTotalHoursBadge');
+      const submitBtn = document.getElementById('assignSubmitBtn');
+      const msgBox = document.getElementById('assignHourValidationMsg');
+
+      badge.innerText = `선택된 시간: ${total}시간 / 3시간`;
+
+      // PRD Rule: Strictly 3 hours required
+      if (total === 3) {
+        badge.className = "text-sm font-extrabold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800";
+        submitBtn.disabled = false;
+        submitBtn.className = "w-full py-3.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 cursor-pointer transition shadow-md flex items-center justify-center space-x-2";
+        msgBox.innerText = "정확히 3시간이 선택되었습니다. 교육 배정을 저장할 수 있습니다.";
+        msgBox.parentElement.className = "p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center space-x-2";
+      } else {
+        badge.className = "text-sm font-extrabold px-3 py-1 rounded-full bg-amber-100 text-amber-800";
+        submitBtn.disabled = true;
+        submitBtn.className = "w-full py-3.5 rounded-xl font-bold text-white bg-slate-300 cursor-not-allowed transition shadow-sm flex items-center justify-center space-x-2";
+        msgBox.innerText = `현재 ${total}시간 선택됨. 반드시 정확히 3시간이어야 저장 가능합니다. (${total < 3 ? (3 - total) + '시간 부족' : (total - 3) + '시간 초과'})`;
+        msgBox.parentElement.className = "p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold flex items-center space-x-2";
+      }
+    }
+
+    function toggleAssignTargetType(type) {
+      const deptBox = document.getElementById('assignDeptContainer');
+      const indivBox = document.getElementById('assignIndividualContainer');
+      if (type === 'dept') {
+        deptBox.classList.remove('hidden');
+        indivBox.classList.add('hidden');
+      } else {
+        deptBox.classList.add('hidden');
+        indivBox.classList.remove('hidden');
+        populateIndividualSelect();
+      }
+    }
+
+    function populateIndividualSelect() {
+      const select = document.getElementById('assignPartSelect');
+      select.innerHTML = '';
+      AppState.participants.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.innerText = `${p.name} (${p.dept}, ${p.birthDate})`;
+        select.appendChild(opt);
+      });
+    }
+
+    function handleCreateAssignment() {
+      const targetType = document.querySelector('input[name="assignTargetType"]:checked').value;
+      const assignDate = document.getElementById('assignDateInput').value;
+      if (!assignDate) {
+        showToast('교육 배정일을 입력해주세요.', 'alert');
+        return;
+      }
+
+      const checkedBoxes = Array.from(document.querySelectorAll('.assign-course-checkbox:checked'));
+      const courseIds = checkedBoxes.map(cb => parseInt(cb.value, 10));
+
+      let totalHours = 0;
+      courseIds.forEach(id => {
+        const c = OFFICIAL_COURSES.find(item => item.id === id);
+        if (c) totalHours += c.hours;
+      });
+
+      // Strict validation
+      if (totalHours !== 3) {
+        showToast('총 교육시간이 정확히 3시간이 아니므로 저장할 수 없습니다.', 'alert');
+        return;
+      }
+
+      const targetDept = targetType === 'dept' ? document.getElementById('assignDeptSelect').value : null;
+      const participantId = targetType === 'individual' ? document.getElementById('assignPartSelect').value : null;
+
+      const newAssign = {
+        id: 'assign_' + Date.now(),
+        targetType,
+        targetDept,
+        participantId,
+        assignDate,
+        courseIds,
+        totalHours,
+        createdAt: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+      };
+
+      AppState.assignments.push(newAssign);
+      saveStateToStorage();
+      renderAdminViews();
+
+      showToast(`2026년 ${assignDate} 교육 배정(3시간)이 등록되었습니다.`, 'success');
+
+      // Reset checkboxes
+      checkedBoxes.forEach(cb => cb.checked = false);
+      handleAssignCourseCheckChange();
+    }
+
+    function renderAssignmentList() {
+      const tbody = document.getElementById('assignmentListBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (AppState.assignments.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">등록된 교육 배정이 없습니다.</td></tr>`;
+        return;
+      }
+
+      // Sort by date desc
+      const sorted = [...AppState.assignments].sort((a, b) => new Date(b.assignDate) - new Date(a.assignDate));
+
+      sorted.forEach(a => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition";
+
+        let targetLabel = '';
+        if (a.targetType === 'dept') {
+          targetLabel = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-700">${a.targetDept} (일괄)</span>`;
+        } else {
+          const p = AppState.participants.find(part => part.id === a.participantId);
+          targetLabel = p ? `<span class="font-bold text-slate-900">${p.name}</span> <span class="text-xs text-slate-500">(${p.dept})</span>` : '개별';
+        }
+
+        const courseSummary = a.courseIds.map(cId => {
+          const c = OFFICIAL_COURSES.find(item => item.id === cId);
+          return c ? `${c.name}(${c.hours}h)` : '';
+        }).join(', ');
+
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-xs font-bold text-slate-800">${a.assignDate}</td>
+          <td class="p-3 text-xs">${a.targetType === 'dept' ? '사업단 전체' : '개별 참여자'}</td>
+          <td class="p-3 text-xs">${targetLabel}</td>
+          <td class="p-3 text-xs text-slate-700">${courseSummary}</td>
+          <td class="p-3 text-xs text-slate-400 font-mono">${a.createdAt || '-'}</td>
+          <td class="p-3 text-right">
+            <button onclick="handleDeleteAssignment('${a.id}')" class="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition">
+              삭제
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function handleDeleteAssignment(assignId) {
+      if (!confirm('이 교육 배정을 삭제하시겠습니까? 관련된 참여자의 미제출 배정 내역도 함께 정리됩니다.')) return;
+      AppState.assignments = AppState.assignments.filter(a => a.id !== assignId);
+      saveStateToStorage();
+      renderAdminViews();
+      showToast('교육 배정이 삭제되었습니다.', 'info');
+    }
+
+    /* --- Participant List & Excel Management --- */
+    function renderParticipantTable() {
+      const tbody = document.getElementById('participantTableBody');
+      const emptyBox = document.getElementById('participantTableEmpty');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (AppState.participants.length === 0) {
+        emptyBox.classList.remove('hidden');
+        return;
+      }
+      emptyBox.classList.add('hidden');
+
+      AppState.participants.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition";
+        tr.innerHTML = `
+          <td class="p-4 font-bold text-slate-900">${p.name}</td>
+          <td class="p-4 font-mono text-xs text-slate-600">${formatBirthDisplay(p.birthDate)}</td>
+          <td class="p-4">
+            <span class="px-2 py-0.5 rounded text-xs font-bold ${p.dept === '공원환경개선' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}">
+              ${p.dept}
+            </span>
+          </td>
+          <td class="p-4 text-xs text-slate-500 font-mono">${p.phone || '-'}</td>
+          <td class="p-4 text-xs text-slate-400 font-mono">${p.createdAt || '-'}</td>
+          <td class="p-4 text-right">
+            <button onclick="handleDeleteParticipant('${p.id}')" class="px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 rounded-lg transition font-medium">
+              삭제
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function handleAddParticipantSubmit(event) {
+      event.preventDefault();
+      const name = document.getElementById('addPartName').value.trim();
+      const rawBirth = document.getElementById('addPartBirth').value.trim();
+      const dept = document.getElementById('addPartDept').value;
+      const phone = document.getElementById('addPartPhone').value.trim();
+
+      const birthDate = normalizeBirthDate(rawBirth);
+      if (!name || !birthDate) {
+        showToast('성함과 생년월일을 올바르게 입력해주세요.', 'alert');
+        return;
+      }
+
+      // Check duplicates
+      const exists = AppState.participants.some(p => p.name === name && normalizeBirthDate(p.birthDate) === birthDate);
+      if (exists) {
+        showToast('동일한 성함과 생년월일을 가진 참여자가 이미 등록되어 있습니다.', 'alert');
+        return;
+      }
+
+      const newPart = {
+        id: 'p_' + Date.now(),
+        name,
+        birthDate,
+        dept,
+        phone,
+        createdAt: new Date().toLocaleDateString('ko-KR')
+      };
+
+      AppState.participants.push(newPart);
+      saveStateToStorage();
+      closeModal('modalAddParticipant');
+      renderAdminViews();
+
+      showToast(`참여자 [${name}] 어르신이 등록되었습니다.`, 'success');
+    }
+
+    function handleDeleteParticipant(partId) {
+      const part = AppState.participants.find(p => p.id === partId);
+      if (!part) return;
+      if (!confirm(`[${part.name}] 어르신을 삭제하시겠습니까? 관련 이수 기록도 모두 삭제됩니다.`)) return;
+
+      AppState.participants = AppState.participants.filter(p => p.id !== partId);
+      AppState.submissions = AppState.submissions.filter(s => s.participantId !== partId);
+      AppState.assignments = AppState.assignments.filter(a => !(a.targetType === 'individual' && a.participantId === partId));
+
+      saveStateToStorage();
+      renderAdminViews();
+      showToast('참여자가 삭제되었습니다.', 'info');
+    }
+
+    /* --- Excel Import & Export --- */
+    function downloadExcelSample() {
+      const sampleData = [
+        { "성함": "홍길동", "생년월일": "19520315", "사업단": "공원환경개선", "연락처": "010-1234-5678" },
+        { "성함": "김영희", "생년월일": "19540822", "사업단": "공원환경개선", "연락처": "010-2345-6789" },
+        { "성함": "이철수", "생년월일": "19501105", "사업단": "지역사회환경개선", "연락처": "010-3456-7890" },
+        { "성함": "박순자", "생년월일": "19530419", "사업단": "지역사회환경개선", "연락처": "010-4567-8901" }
+      ];
+
+      const ws = XLSX.utils.json_to_sheet(sampleData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "참여자명단_서식");
+      XLSX.writeFile(wb, "노인일자리_실외사업단_참여자명단_양식.xlsx");
+    }
+
+    function handleExcelFileSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(firstSheet);
+
+          excelParsedCandidates = [];
+          let duplicateCount = 0;
+
+          json.forEach(row => {
+            const name = (row['성함'] || row['이름'] || row['성명'] || '').toString().trim();
+            const rawBirth = (row['생년월일'] || row['주민번호앞자리'] || '').toString().trim();
+            const dept = (row['사업단'] || row['사업단명'] || '공원환경개선').toString().trim();
+            const phone = (row['연락처'] || row['휴대전화'] || '').toString().trim();
+
+            if (!name || !rawBirth) return;
+            const birthDate = normalizeBirthDate(rawBirth);
+
+            const isDuplicate = AppState.participants.some(p => p.name === name && normalizeBirthDate(p.birthDate) === birthDate);
+            if (isDuplicate) duplicateCount++;
+
+            excelParsedCandidates.push({
+              name,
+              birthDate,
+              dept: (dept.includes('지역') ? '지역사회환경개선' : '공원환경개선'),
+              phone,
+              isDuplicate
+            });
+          });
+
+          // Show preview
+          document.getElementById('excelPreviewContainer').classList.remove('hidden');
+          document.getElementById('excelParsedCount').innerText = excelParsedCandidates.length;
+          document.getElementById('excelDuplicateCount').innerText = `중복 ${duplicateCount}건 제외 예정`;
+
+          const listEl = document.getElementById('excelPreviewList');
+          listEl.innerHTML = '';
+          excelParsedCandidates.forEach(c => {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = "flex justify-between py-1 text-slate-700 " + (c.isDuplicate ? "text-slate-400 line-through" : "");
+            rowDiv.innerHTML = `<span>${c.name} (${c.dept})</span><span class="font-mono">${formatBirthDisplay(c.birthDate)}</span>`;
+            listEl.appendChild(rowDiv);
+          });
+
+          const validCount = excelParsedCandidates.filter(c => !c.isDuplicate).length;
+          document.getElementById('excelConfirmBtn').disabled = validCount === 0;
+
+        } catch (err) {
+          console.error(err);
+          showToast('엑셀 파일 분석 중 오류가 발생했습니다.', 'alert');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function handleConfirmExcelUpload() {
+      const valid = excelParsedCandidates.filter(c => !c.isDuplicate);
+      if (valid.length === 0) return;
+
+      valid.forEach(c => {
+        AppState.participants.push({
+          id: 'p_' + Math.random().toString(36).substr(2, 9),
+          name: c.name,
+          birthDate: c.birthDate,
+          dept: c.dept,
+          phone: c.phone,
+          createdAt: new Date().toLocaleDateString('ko-KR')
+        });
+      });
+
+      saveStateToStorage();
+      closeModal('modalExcelUpload');
+      renderAdminViews();
+
+      showToast(`신규 참여자 ${valid.length}명이 엑셀에서 등록되었습니다.`, 'success');
+    }
+
+    /* --- Settings & Backup --- */
+    function saveAdminSettings() {
+      const orgName = document.getElementById('settingOrgNameInput').value.trim();
+      const depts = document.getElementById('settingDeptsInput').value.split(',').map(s => s.trim()).filter(Boolean);
+      const newPwd = document.getElementById('settingAdminPasswordInput').value.trim();
+
+      if (orgName) AppState.settings.orgName = orgName;
+      if (depts.length > 0) AppState.settings.depts = depts;
+      if (newPwd) AppState.settings.adminPassword = newPwd;
+
+      saveStateToStorage();
+      updateHeaderOrg();
+      showToast('기관 및 관리자 설정이 저장되었습니다.', 'success');
+    }
+
+    function exportDataBackup() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = `노인일자리_비대면교육_백업_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+    }
+
+    function importDataBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed.participants && parsed.assignments) {
+            AppState = parsed;
+            saveStateToStorage();
+            updateHeaderOrg();
+            renderAdminViews();
+            showToast('백업 데이터가 성공적으로 복원되었습니다.', 'success');
+          } else {
+            showToast('올바른 백업 파일 형식이 아닙니다.', 'alert');
+          }
+        } catch (err) {
+          showToast('백업 파일 해석 중 오류가 발생했습니다.', 'alert');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function handleResetAllData() {
+      if (!confirm('정말로 모든 참여자 명단, 교육 배정 및 이수확인증 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+
+    function handleCustomPdfUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target.result.split(',')[1];
+        AppState.customPdfBase64 = base64;
+        saveStateToStorage();
+        showToast('사용자 지정 공식 양식 PDF가 등록되었습니다.', 'success');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* ==========================================================================
+       6. OFFICIAL PDF CONFIRMATION GENERATION ENGINE (PDF-LIB + HIGH-RES CANVAS)
+       ========================================================================== */
+    /**
+     * Helper to render text with native browser font to PNG data URL
+     * This avoids any CJK font loading issues with pdf-lib and produces 100% crisp Korean typography!
+     */
+    function createTextOverlayImage(text, fontSize = 24, isBold = false, textColor = '#111827', width = 600, height = 60) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width * 2;   // 2x for retina sharpness
+      canvas.height = height * 2;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(2, 2);
+
+      ctx.font = `${isBold ? 'bold ' : ''}${fontSize}px Pretendard, "Malgun Gothic", sans-serif`;
+      ctx.fillStyle = textColor;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 5, height / 2);
+
+      return canvas.toDataURL('image/png');
+    }
+
+    /**
+     * Generates the official completed confirmation PDF Uint8Array for a given participant and date
+     */
+    async function generateConfirmationPdfBytes(participantId, assignDate) {
+      const part = AppState.participants.find(p => p.id === participantId);
+      if (!part) throw new Error('Participant not found');
+
+      const assign = AppState.assignments.find(a => {
+        if (a.assignDate !== assignDate) return false;
+        if (a.targetType === 'individual' && a.participantId === participantId) return true;
+        if (a.targetType === 'dept' && a.targetDept === part.dept) return true;
+        return false;
+      });
+      if (!assign) throw new Error('Assignment not found');
+
+      const sub = AppState.submissions.find(s => s.participantId === participantId && s.assignDate === assignDate);
+      if (!sub) throw new Error('Submission not found');
+
+      // 1. Get base template PDF
+      const pdfBase64 = AppState.customPdfBase64 || window.DEFAULT_PDF_BASE64;
+      if (!pdfBase64) {
+        throw new Error('Template PDF is missing. Please upload the template PDF.');
+      }
+
+      const binaryPdf = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
+      const pdfDoc = await PDFLib.PDFDocument.load(binaryPdf);
+      const pages = pdfDoc.getPages();
+      const firstPage = pages[0];
+      const { width, height } = firstPage.getSize(); // Standard A4: 595 x 841
+
+      // 2. Embed Header Informations:
+      // Exact PDF coordinates calibrated from Hancom PDF template:
+      // x: colon is at x ≈ 294 pt. Value begins at x ≈ 305 pt.
+      // y positions:
+      // 기관명   : y ≈ 684 pt
+      // 사업단명 : y ≈ 663 pt
+      // 생년월일 : y ≈ 642 pt
+      // 성명     : y ≈ 621 pt
+      
+      const headerFields = [
+        { text: AppState.settings.orgName, x: 305, y: 680, width: 200, height: 20, fontSize: 13 },
+        { text: part.dept,                 x: 305, y: 659, width: 200, height: 20, fontSize: 13 },
+        { text: formatBirthDisplay(part.birthDate), x: 305, y: 638, width: 200, height: 20, fontSize: 13 },
+        { text: part.name,                 x: 305, y: 617, width: 200, height: 20, fontSize: 14, isBold: true }
+      ];
+
+      for (const field of headerFields) {
+        const pngUrl = createTextOverlayImage(field.text, field.fontSize, field.isBold || false, '#0f172a', field.width, field.height);
+        const pngImage = await pdfDoc.embedPng(pngUrl);
+        firstPage.drawImage(pngImage, {
+          x: field.x,
+          y: field.y,
+          width: field.width,
+          height: field.height
+        });
+      }
+
+      // 3. Calibrated Row Positions for 17 Table Rows
+      // Each course row in the official PDF has exact vertical center:
+      const ROW_Y_COORDS = {
+        1: 504,  // 안전사고예방워크북
+        2: 482,  // 안전교육1과정
+        3: 459,  // 안전교육2과정
+        4: 437,  // 안전교육3과정
+        5: 414,  // 안전교육4과정
+        6: 391,  // 노인일자리 화상예방교육
+        7: 369,  // 노인 화상예방송
+        8: 346,  // 노인일자리참여자 활동 중 화상예방안전교육
+        9: 324,  // 안전사례1
+        10: 301, // 안전사례2
+        11: 279, // 안전워크북 1
+        12: 256, // 안전워크북 2
+        13: 234, // 안전워크북 3
+        14: 211, // 인권교육
+        15: 189, // 성희롱예방교육
+        16: 167, // 노인일자리의 이해
+        17: 144  // 노인일자리 적응하기
+      };
+
+      // Format Date: e.g. "2026. 04. 15"
+      const dateParts = assignDate.split('-');
+      const year = dateParts[0];
+      const month = dateParts[1];
+      const day = dateParts[2];
+      const formattedDateString = `${year}.  ${month}.  ${day}`;
+
+      // 4. Draw Date and Participant Signatures onto Table Rows
+      // Only for completed courses!
+      for (const courseId of (sub.completedCourseIds || [])) {
+        const yCenter = ROW_Y_COORDS[courseId];
+        if (!yCenter) continue;
+
+        // Draw Actual Learning Date in "실제학습일" column (x ≈ 286 to 376, center ≈ 330)
+        const datePngUrl = createTextOverlayImage(formattedDateString, 11, true, '#1e293b', 90, 18);
+        const datePng = await pdfDoc.embedPng(datePngUrl);
+        firstPage.drawImage(datePng, {
+          x: 288,
+          y: yCenter - 6,
+          width: 86,
+          height: 18
+        });
+
+        // Draw Signature in "참여자 서명" column (x ≈ 378 to 550, center ≈ 460)
+        const sigDataUrl = sub.signatures && sub.signatures[courseId];
+        if (sigDataUrl) {
+          const sigPng = await pdfDoc.embedPng(sigDataUrl);
+          // Scale nicely within row height (max height ≈ 20, max width ≈ 100)
+          const sigWidth = 90;
+          const sigHeight = 22;
+          firstPage.drawImage(sigPng, {
+            x: 418,
+            y: yCenter - 8,
+            width: sigWidth,
+            height: sigHeight
+          });
+        }
+      }
+
+      return await pdfDoc.save();
+    }
+
+    async function handleDownloadSinglePdf(participantId, assignDate) {
+      try {
+        showToast('이수확인증 PDF 생성 중...', 'info');
+        const pdfBytes = await generateConfirmationPdfBytes(participantId, assignDate);
+        const part = AppState.participants.find(p => p.id === participantId);
+        
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `이수확인증_${part.name}_${part.dept}_${assignDate}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        showToast(`[${part.name}] 어르신 이수확인증이 다운로드되었습니다.`, 'success');
+      } catch (err) {
+        console.error(err);
+        showToast(`PDF 생성 오류: ${err.message}`, 'alert');
+      }
+    }
+
+    async function handleBulkZipDownload() {
+      const selectedBoxes = Array.from(document.querySelectorAll('.row-checkbox:checked'));
+      if (selectedBoxes.length === 0) {
+        showToast('일괄 다운로드할 완료 건의 체크박스를 선택해주세요.', 'alert');
+        return;
+      }
+
+      try {
+        showToast(`선택된 ${selectedBoxes.length}건의 이수확인증 PDF를 ZIP으로 압축 중...`, 'info');
+        const zip = new JSZip();
+
+        for (const cb of selectedBoxes) {
+          const partId = cb.getAttribute('data-part-id');
+          const assignDate = cb.getAttribute('data-date');
+          const part = AppState.participants.find(p => p.id === partId);
+
+          const pdfBytes = await generateConfirmationPdfBytes(partId, assignDate);
+          const filename = `이수확인증_${part.name}_${part.dept}_${assignDate}.pdf`;
+          zip.file(filename, pdfBytes);
+        }
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `노인일자리_실외사업단_이수확인증_일괄_${new Date().toISOString().slice(0, 10)}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        showToast('ZIP 파일 다운로드가 완료되었습니다.', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast(`ZIP 압축 중 오류: ${err.message}`, 'alert');
+      }
+    }
+
+    function openSubmissionDetailModal(partId, assignDate) {
+      const part = AppState.participants.find(p => p.id === partId);
+      const sub = AppState.submissions.find(s => s.participantId === partId && s.assignDate === assignDate);
+      const assign = AppState.assignments.find(a => {
+        if (a.assignDate !== assignDate) return false;
+        if (a.targetType === 'individual' && a.participantId === partId) return true;
+        if (a.targetType === 'dept' && a.targetDept === part.dept) return true;
+        return false;
+      });
+
+      if (!part || !assign) return;
+
+      document.getElementById('modalDetailTitle').innerText = `${part.name} 어르신 이수 상세`;
+      document.getElementById('modalDetailSubtitle').innerText = `${part.dept} 사업단 | 배정일: ${assignDate}`;
+
+      const content = document.getElementById('modalDetailContent');
+      content.innerHTML = '';
+
+      const isComplete = sub && (sub.completedCourseIds || []).length === assign.courseIds.length;
+
+      let html = `
+        <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+          <div><b>생년월일:</b> ${formatBirthDisplay(part.birthDate)}</div>
+          <div><b>연락처:</b> ${part.phone || '-'}</div>
+          <div><b>제출 일시:</b> ${sub ? (sub.submittedAt || '-') : '미제출'}</div>
+          <div><b>담당자 검토:</b> ${sub && sub.reviewed ? '<span class="text-blue-600 font-bold">완료</span>' : '미검토'}</div>
+        </div>
+        <h4 class="font-bold text-slate-800 text-sm mt-3">배정 과목 및 서명 내역 (총 3시간)</h4>
+        <div class="space-y-3">
+      `;
+
+      assign.courseIds.forEach(cId => {
+        const course = OFFICIAL_COURSES.find(c => c.id === cId);
+        const isDone = sub && sub.completedCourseIds && sub.completedCourseIds.includes(cId);
+        const sigUrl = sub && sub.signatures && sub.signatures[cId];
+
+        html += `
+          <div class="p-3 rounded-xl border ${isDone ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200 bg-slate-50'} flex items-center justify-between">
+            <div>
+              <span class="font-bold text-slate-900">${course.name}</span>
+              <span class="text-xs text-slate-500 ml-1">(${course.hours}시간)</span>
+              <div class="text-xs text-slate-400 mt-0.5">실제학습일: ${assignDate}</div>
+            </div>
+            <div class="text-right">
+              ${sigUrl ? `<img src="${sigUrl}" class="h-10 border border-slate-200 rounded bg-white px-2 object-contain" alt="서명">` : '<span class="text-xs text-slate-400">서명 없음</span>'}
+            </div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+      content.innerHTML = html;
+
+      // Review Action Button
+      const reviewActionBox = document.getElementById('modalReviewActionContainer');
+      if (sub && isComplete) {
+        reviewActionBox.innerHTML = `
+          <button onclick="toggleManagerReview('${sub.id}'); closeModal('modalSubmissionDetail');" class="px-3.5 py-2 rounded-xl text-xs font-bold ${sub.reviewed ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'} transition">
+            ${sub.reviewed ? '검토 완료 취소' : '담당자 검토 완료 처리'}
+          </button>
+        `;
+      } else {
+        reviewActionBox.innerHTML = '';
+      }
+
+      // Single PDF download button inside modal
+      const singleBtn = document.getElementById('modalSinglePdfBtn');
+      if (isComplete) {
+        singleBtn.disabled = false;
+        singleBtn.onclick = () => handleDownloadSinglePdf(part.id, assignDate);
+        singleBtn.className = "px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition flex items-center space-x-1.5 shadow-sm";
+      } else {
+        singleBtn.disabled = true;
+        singleBtn.className = "px-4 py-2 rounded-xl bg-slate-200 text-slate-400 text-sm font-bold cursor-not-allowed flex items-center space-x-1.5";
+      }
+
+      openModal('modalSubmissionDetail');
+    }
+
+    /* ==========================================================================
+       7. DEMO SAMPLE DATA (실외사업단 2개소 + 참여자 10명 + 배정 + 서명 샘플)
+       ========================================================================== */
+    function loadSampleDemoData(showToastAlert = true) {
+      AppState.settings = {
+        orgName: '행복노인종합복지관',
+        depts: ['공원환경개선', '지역사회환경개선'],
+        adminPassword: 'admin1234'
+      };
+
+      AppState.participants = [
+        { id: 'p_demo_1', name: '김순자', birthDate: '19520315', dept: '공원환경개선', phone: '010-1111-2222', createdAt: '2026-03-01' },
+        { id: 'p_demo_2', name: '박영철', birthDate: '19510512', dept: '공원환경개선', phone: '010-2222-3333', createdAt: '2026-03-01' },
+        { id: 'p_demo_3', name: '이정숙', birthDate: '19540820', dept: '공원환경개선', phone: '010-3333-4444', createdAt: '2026-03-01' },
+        { id: 'p_demo_4', name: '정태수', birthDate: '19501104', dept: '공원환경개선', phone: '010-4444-5555', createdAt: '2026-03-01' },
+        { id: 'p_demo_5', name: '최옥분', birthDate: '19530918', dept: '공원환경개선', phone: '010-5555-6666', createdAt: '2026-03-01' },
+        { id: 'p_demo_6', name: '홍길동', birthDate: '19520425', dept: '지역사회환경개선', phone: '010-6666-7777', createdAt: '2026-03-01' },
+        { id: 'p_demo_7', name: '강명희', birthDate: '19550110', dept: '지역사회환경개선', phone: '010-7777-8888', createdAt: '2026-03-01' },
+        { id: 'p_demo_8', name: '윤석진', birthDate: '19491203', dept: '지역사회환경개선', phone: '010-8888-9999', createdAt: '2026-03-01' },
+        { id: 'p_demo_9', name: '오미자', birthDate: '19530714', dept: '지역사회환경개선', phone: '010-9999-0000', createdAt: '2026-03-01' },
+        { id: 'p_demo_10', name: '한상우', birthDate: '19510629', dept: '지역사회환경개선', phone: '010-1010-2020', createdAt: '2026-03-01' }
+      ];
+
+      // Two sample assignments (3 hours each)
+      // Assignment 1: 공원환경개선 (2026-04-15) -> 안전교육1(1h) + 안전교육2(1h) + 화상예방(1h) = 3h
+      // Assignment 2: 지역사회환경개선 (2026-04-20) -> 안전사고예방워크북(2h) + 인권교육(1h) = 3h
+      AppState.assignments = [
+        {
+          id: 'assign_demo_1',
+          targetType: 'dept',
+          targetDept: '공원환경개선',
+          participantId: null,
+          assignDate: '2026-04-15',
+          courseIds: [2, 3, 6], // 1h + 1h + 1h = 3h
+          totalHours: 3,
+          createdAt: '2026-04-01 09:00:00'
+        },
+        {
+          id: 'assign_demo_2',
+          targetType: 'dept',
+          targetDept: '지역사회환경개선',
+          participantId: null,
+          assignDate: '2026-04-20',
+          courseIds: [1, 14], // 2h + 1h = 3h
+          totalHours: 3,
+          createdAt: '2026-04-01 09:30:00'
+        }
+      ];
+
+      // Sample submission with realistic signatures for demo participant 1 (김순자)
+      const sampleSig = createTextOverlayImage('김순자', 32, true, '#0f172a', 300, 100);
+      AppState.submissions = [
+        {
+          id: 'sub_demo_1',
+          participantId: 'p_demo_1',
+          assignmentId: 'assign_demo_1',
+          assignDate: '2026-04-15',
+          completedCourseIds: [2, 3, 6],
+          signatures: {
+            2: sampleSig,
+            3: sampleSig,
+            6: sampleSig
+          },
+          submittedAt: '2026-04-15 14:32:10',
+          reviewed: true,
+          reviewedAt: '2026-04-16 10:15:00'
+        }
+      ];
+
+      saveStateToStorage();
+      updateHeaderOrg();
+      renderAdminViews();
+
+      if (showToastAlert) {
+        showToast('실외사업단 가상 데모 데이터(10명 + 3시간 배정 + 이수완료 1건)가 로드되었습니다.', 'success');
+      }
+    }
+
+    /* ==========================================================================
+       8. MODAL & TOAST HELPERS
+       ========================================================================== */
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toastNotification');
+      const msgEl = document.getElementById('toastMessage');
+      const iconEl = document.getElementById('toastIcon');
+
+      msgEl.innerText = message;
+      if (type === 'success') {
+        iconEl.setAttribute('data-lucide', 'check-circle');
+        iconEl.className = "w-5 h-5 text-emerald-400 flex-shrink-0";
+      } else if (type === 'alert') {
+        iconEl.setAttribute('data-lucide', 'alert-circle');
+        iconEl.className = "w-5 h-5 text-red-400 flex-shrink-0";
+      } else {
+        iconEl.setAttribute('data-lucide', 'info');
+        iconEl.className = "w-5 h-5 text-blue-400 flex-shrink-0";
+      }
+      initLucide();
+
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+
+      clearTimeout(window._toastTimeout);
+      window._toastTimeout = setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>
